@@ -133,12 +133,17 @@ body.dark .glass-card {
 body.dark .form-control-modern {
   background: rgba(0, 0, 0, 0.2);
   border-color: rgba(255, 255, 255, 0.1);
-  color: white;
+  color: white !important;
+}
+
+body.dark .form-control-modern::placeholder {
+    color: rgba(255, 255, 255, 0.5);
 }
 
 body.dark .form-control-modern:focus {
   background: rgba(0, 0, 0, 0.4);
   border-color: #818cf8;
+  color: white !important;
 }
 
 .btn-primary-modern {
@@ -249,14 +254,42 @@ body.dark .form-control-modern:focus {
   border: none;
 }
 
+/* Table Dark Mode Enhancements */
 body.dark .table {
-  color: var(--text-main);
+  color: var(--text-muted); /* Default text color for table content */
+  background-color: transparent;
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--text-muted);
+  --bs-table-striped-color: var(--text-muted);
+  --bs-table-active-color: var(--text-main);
+  --bs-table-hover-color: var(--text-main);
 }
+
 body.dark .table thead th {
+    color: var(--text-main); /* Headings should be brighter */
     border-bottom-color: var(--border-color);
+    background-color: rgba(255, 255, 255, 0.05); /* Slight tint for header */
 }
-body.dark .table td, body.dark .table th {
+
+body.dark .table td, 
+body.dark .table th {
     border-bottom-color: var(--border-color);
+    background-color: transparent;
+    color: inherit; /* Inherit from table or row */
+}
+
+body.dark .table .text-dark {
+    color: var(--text-main) !important;
+}
+
+body.dark .table .badge.bg-light {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: var(--text-main) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+body.dark .table .text-muted {
+    color: var(--text-muted) !important;
 }
 
 /* Table Hover Effect */
@@ -265,6 +298,46 @@ body.dark .table td, body.dark .table th {
 }
 
 /* --- Restoring Missing Layout Styles --- */
+
+/* Dark Mode Text Utilities Overrides */
+body.dark .text-muted {
+    color: var(--text-muted) !important;
+}
+
+body.dark .text-dark {
+    color: var(--text-main) !important;
+}
+
+/* User Dropdown Dark Mode */
+body.dark .nav-link.dropdown-toggle {
+    color: var(--text-main);
+}
+
+body.dark .nav-link.dropdown-toggle .fw-bold {
+    color: var(--text-main) !important;
+}
+
+/* Sidebar Dark Mode Enhancements */
+body.dark .sidebar-modern {
+    color: var(--sidebar-text);
+}
+
+body.dark .sidebar-modern .nav-link-modern {
+    color: var(--sidebar-text) !important;
+}
+
+body.dark .sidebar-modern .nav-link-modern:hover {
+    color: var(--hover-text) !important;
+}
+
+body.dark .sidebar-modern .nav-link-modern.active {
+    color: var(--sidebar-active-text) !important;
+}
+
+/* Ensure icons inside links follow the text color */
+body.dark .sidebar-modern .nav-link-modern i {
+    color: inherit;
+}
 
 /* Sidebar */
 .sidebar-modern {
@@ -303,6 +376,23 @@ body.dark .table td, body.dark .table th {
   transition: max-height 0.3s ease-out;
 }
 
+.submenu-wrapper .nav-item {
+    margin-bottom: 0.8rem; /* Lebih renggang antar item untuk kesan elegan */
+}
+
+.submenu-wrapper .nav-link-modern {
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.submenu-wrapper .nav-link-modern:hover {
+    padding-left: 1.2rem; /* Efek geser halus saat hover */
+    background-color: transparent; /* Tetap transparan agar bersih */
+    color: var(--sidebar-active-text);
+}
+
 .submenu-wrapper.open {
   max-height: 500px; /* Arbitrary large height */
   transition: max-height 0.3s ease-in;
@@ -311,7 +401,7 @@ body.dark .table td, body.dark .table th {
 /* Flyout Menu */
 .flyout-menu {
   position: fixed;
-  left: 80px; /* Sidebar collapsed width */
+  left: 75px; /* Sidebar collapsed width - 5px overlap to prevent gap */
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 0.5rem;
@@ -319,6 +409,18 @@ body.dark .table td, body.dark .table th {
   width: 200px;
   box-shadow: var(--shadow-lg);
   z-index: 1050;
+  margin-top: -10px; /* Pull up slightly to align better */
+}
+
+/* Invisible bridge to prevent closing when moving cursor */
+.flyout-menu::before {
+    content: '';
+    position: absolute;
+    left: -20px; /* Extend hit area to the left */
+    top: 0;
+    height: 100%;
+    width: 20px;
+    background: transparent;
 }
 
 .flyout-header {
