@@ -1,6 +1,7 @@
 const React = window.React;
 const { useState, useEffect } = React;
 const $ = window.jQuery;
+import config from '/src/config.js';
 
 // --- Components ---
 
@@ -467,12 +468,45 @@ function DashboardLayout({ onLogout, isDarkMode, toggleTheme }) {
 }
 
 function LoginPage({ onLogin, isDarkMode, toggleTheme }) {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (username && password) onLogin();
+    if (!email || !password) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${config.api.baseUrl}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        onLogin(data.user);
+      } else {
+        setError(data.message || 'Login failed');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+      console.error('Login error:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return React.createElement('div', { 
@@ -489,15 +523,19 @@ function LoginPage({ onLogin, isDarkMode, toggleTheme }) {
               React.createElement('h3', { className: 'fw-bold mb-1' }, 'Welcome Back'),
               React.createElement('p', { className: 'text-muted' }, 'Enter your credentials to access the admin.')
             ]),
+            
+            error && React.createElement('div', { key: 'error', className: 'alert alert-danger small py-2 mb-3' }, error),
+
             React.createElement('form', { key: 'form', onSubmit: handleSubmit }, [
               React.createElement('div', { key: 'u', className: 'mb-3' }, [
-                React.createElement('label', { className: 'form-label small fw-bold text-muted ms-1' }, 'USERNAME'),
+                React.createElement('label', { className: 'form-label small fw-bold text-muted ms-1' }, 'EMAIL'),
                 React.createElement('input', {
-                  type: 'text',
+                  type: 'email', // Changed to email for better validation
                   className: 'form-control form-control-modern',
-                  placeholder: 'e.g. admin',
-                  value: username,
-                  onChange: (e) => setUsername(e.target.value)
+                  placeholder: 'name@example.com',
+                  value: email,
+                  onChange: (e) => setEmail(e.target.value),
+                  disabled: isLoading
                 })
               ]),
               React.createElement('div', { key: 'p', className: 'mb-4' }, [
@@ -507,12 +545,18 @@ function LoginPage({ onLogin, isDarkMode, toggleTheme }) {
                   className: 'form-control form-control-modern',
                   placeholder: '••••••••',
                   value: password,
-                  onChange: (e) => setPassword(e.target.value)
+                  onChange: (e) => setPassword(e.target.value),
+                  disabled: isLoading
                 })
               ]),
-              React.createElement('button', { key: 'btn', type: 'submit', className: 'btn btn-primary-modern w-100 py-3 shadow-sm' }, [
-                'Sign In ',
-                React.createElement('i', { className: 'fa-solid fa-arrow-right ms-2' })
+              React.createElement('button', { 
+                key: 'btn', 
+                type: 'submit', 
+                className: 'btn btn-primary-modern w-100 py-3 shadow-sm',
+                disabled: isLoading
+              }, [
+                isLoading ? 'Signing In...' : 'Sign In ',
+                !isLoading && React.createElement('i', { className: 'fa-solid fa-arrow-right ms-2' })
               ])
             ]),
             React.createElement('div', { key: 'footer', className: 'text-center mt-4' },
@@ -532,31 +576,66 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // jQuery effects
+  // Check login status on mount
   useEffect(() => {
-    // CSS animations handle entry effects now
-  }, [isLoggedIn]);
+    const token = localStorage.getItem('token');
+    if (token) {
+      setIsLoggedIn(true);
+    }
+    
+    // Check theme preference
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      setIsDarkMode(true);
+      document.body.classList.add('dark');
+    }
+  }, []);
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
-    // You can also toggle a class on the body if you prefer
     if (!isDarkMode) {
       document.body.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
     } else {
       document.body.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
+
+  const handleLogin = (user) => {
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        await fetch(`${config.api.baseUrl}/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setIsLoggedIn(false);
     }
   };
 
   if (!isLoggedIn) {
     return React.createElement(LoginPage, { 
-      onLogin: () => setIsLoggedIn(true),
+      onLogin: handleLogin,
       isDarkMode: isDarkMode,
       toggleTheme: toggleTheme
     });
   }
 
   return React.createElement(DashboardLayout, { 
-    onLogout: () => setIsLoggedIn(false),
+    onLogout: handleLogout,
     isDarkMode: isDarkMode,
     toggleTheme: toggleTheme
   });

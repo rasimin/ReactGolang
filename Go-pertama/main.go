@@ -312,6 +312,19 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	email := r.Header.Get("X-User-Email")
+	logActivity(email, "LOGOUT", "User logged out")
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Logout successful"})
+}
+
 func main() {
 	// Load Configuration
 	var err error
@@ -347,6 +360,7 @@ func main() {
 	// Protected routes
 	mux.HandleFunc("/change-password", enableCORS(authMiddleware(changePasswordHandler)))
 	mux.HandleFunc("/upload-picture", enableCORS(authMiddleware(uploadHandler)))
+	mux.HandleFunc("/logout", enableCORS(authMiddleware(logoutHandler)))
 
 	// Frontend Static Files
 	// Assumes react-pertama is at ../react-pertama
