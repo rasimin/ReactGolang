@@ -1,0 +1,75 @@
+/* Reset and Base Styles */
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Default Light Mode Variables */
+  --bg-color: #f0f2f5; /* Light grey for full page background */
+  --text-color: #213547;
+  --primary-color: #007bff;
+  --primary-hover: #0056b3;
+  --card-bg: #ffffff;
+  --border-color: #ddd;
+  --input-bg: #f9f9f9;
+}
+
+/* Dark Mode Variables */
+body.dark {
+  --bg-color: #121212; /* Deep dark for full page background */
+  --text-color: rgba(255, 255, 255, 0.9);
+  --primary-color: #bb86fc;
+  --primary-hover: #9b65da;
+  --card-bg: #1e1e1e;
+  --border-color: #333;
+  --input-bg: #2c2c2c;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  place-items: center;
+  justify-content: center;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  transition: background-color 0.5s ease, color 0.5s ease;
+  overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
+a {
+  font-weight: 500;
+  color: var(--primary-color);
+  text-decoration: inherit;
+}
+a:hover {
+  color: var(--primary-hover);
+}
+
+h1 {
+  font-size: 2.5rem;
+  line-height: 1.1;
+  margin: 0;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
