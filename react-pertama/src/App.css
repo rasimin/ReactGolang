@@ -297,37 +297,101 @@ body.dark .header-modern .dropdown-toggle::after {
   color: var(--text-main);
 }
 
-/* Dropdown Animation */
-@keyframes dropdownSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Smooth Transition for Modal Elements */
+.modal-content,
+.form-control,
+.form-select,
+.btn-close {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, filter 0.3s ease, box-shadow 0.3s ease;
 }
 
-.dropdown-menu.show {
-  animation: dropdownSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  display: block; /* Ensure it triggers animation */
+/* --- Dark Mode Modal & Form Overrides --- */
+body.dark .modal-content {
+  background-color: var(--bg-card);
+  color: var(--text-main);
+  border: 1px solid var(--border-color) !important;
 }
 
-/* Dark Mode Dropdown Global Overrides */
+body.dark .modal-header,
+body.dark .modal-footer {
+  border-color: var(--border-color);
+}
+
+body.dark .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+body.dark .form-control,
+body.dark .form-select {
+  background-color: var(--bg-body);
+  border-color: var(--border-color);
+  color: var(--text-main);
+}
+
+body.dark .form-control:focus,
+body.dark .form-select:focus {
+  background-color: var(--bg-body);
+  border-color: var(--sidebar-active-text);
+  color: var(--text-main);
+  box-shadow: 0 0 0 0.25rem rgba(99, 102, 241, 0.25);
+}
+
+body.dark .form-control::placeholder {
+  color: var(--text-muted);
+}
+
+body.dark .form-check-input {
+  background-color: var(--bg-body);
+  border-color: var(--border-color);
+}
+
+body.dark .form-check-input:checked {
+  background-color: #6366f1; /* Primary color */
+  border-color: #6366f1;
+}
+
+body.dark .form-check-label {
+  color: var(--text-main);
+}
+
+/* --- Dark Mode Table Overrides --- */
+body.dark .table {
+  color: var(--text-main);
+  border-color: var(--border-color);
+}
+
+body.dark .table > :not(caption) > * > * {
+  background-color: transparent;
+  color: var(--text-main);
+  border-bottom-color: var(--border-color);
+}
+
+body.dark .table-hover > tbody > tr:hover > * {
+  background-color: var(--hover-bg);
+  color: var(--text-main);
+}
+
+body.dark .bg-modern-subtle {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Ensure text-muted is readable in dark mode */
+body.dark .text-muted {
+  color: var(--text-muted) !important;
+}
+
+/* Fix for striped tables if used */
+body.dark .table-striped > tbody > tr:nth-of-type(odd) > * {
+  background-color: rgba(255, 255, 255, 0.02);
+  color: var(--text-main);
+}
+
+/* --- Dark Mode Dropdown Overrides --- */
 body.dark .dropdown-menu {
   background-color: var(--bg-card);
   border-color: var(--border-color);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
-}
-
-body.dark .dropdown-menu .border-bottom,
-body.dark .dropdown-menu .border-top {
-  border-color: var(--border-color) !important;
-}
-
-body.dark .dropdown-menu .text-muted {
-  color: rgba(255, 255, 255, 0.5) !important;
+  color: var(--text-main);
+  box-shadow: var(--shadow-lg);
 }
 
 body.dark .dropdown-item {
@@ -341,277 +405,30 @@ body.dark .dropdown-item:focus {
 }
 
 body.dark .dropdown-header {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-body.dark .dropdown-divider {
-  border-top-color: var(--border-color);
-}
-
-/* Notification Panel */
-.notification-dropdown {
-  width: 320px;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-/* Fix for List Group inside Dropdown in Dark Mode */
-body.dark .list-group-item {
-  background-color: transparent;
-  border-color: var(--border-color);
-  color: var(--text-main);
-}
-
-body.dark .list-group-item:hover {
-  background-color: var(--hover-bg);
-  color: var(--text-main);
-}
-
-.notification-item {
-  transition: background-color 0.2s;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.notification-item:last-child {
-  border-bottom: none;
-}
-
-.notification-item:hover {
-  background-color: var(--hover-bg);
-}
-
-.notification-item.unread {
-  background-color: rgba(99, 102, 241, 0.05); /* Slight tint */
-}
-
-body.dark .notification-item.unread {
-  background-color: rgba(99, 102, 241, 0.15);
-}
-
-/* Buttons & Gradients */
-.btn-primary-modern {
-  background: var(--primary-gradient);
-  border: none;
-  color: white;
-  border-radius: 12px;
-  padding: 12px 24px;
-  font-weight: 600;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  letter-spacing: 0.5px;
-}
-
-.btn-primary-modern:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(99, 102, 241, 0.4);
-  color: white;
-}
-
-.btn-primary-modern:active {
-  transform: translateY(0);
-}
-
-/* Login Page */
-.login-bg {
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-body.dark .login-bg {
-  background: linear-gradient(135deg, #020617 0%, #1e1b4b 100%);
-}
-
-.glass-card {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 32px;
-  box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease;
-}
-
-body.dark .glass-card {
-  background: rgba(30, 41, 59, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.3);
-}
-
-/* Form Controls */
-.form-control-modern {
-  background-color: var(--bg-body);
-  border: 2px solid transparent; /* Prepare for focus border */
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 14px;
-  color: var(--text-main);
-  transition: all 0.2s ease;
-}
-
-.form-control-modern:focus {
-  background-color: var(--bg-card);
-  border-color: #6366f1;
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
-  color: var(--text-main);
-}
-
-/* Layout Utilities */
-.bg-modern-subtle {
-  background-color: #f1f5f9;
-}
-
-body.dark .bg-modern-subtle {
-  background-color: rgba(255, 255, 255, 0.03);
-}
-
-.text-modern-muted {
-  color: var(--text-modern-muted);
-}
-
-.btn-modern-light {
-  background-color: var(--bg-card);
-  color: var(--text-main);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.btn-modern-light:hover {
-  background-color: var(--bg-body);
-  color: var(--primary-color);
-  border-color: var(--border-color);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
-}
-
-body.dark .btn-modern-light {
-  background-color: rgba(255,255,255,0.03);
-  border-color: rgba(255,255,255,0.05);
-}
-
-body.dark .btn-modern-light:hover {
-  background-color: rgba(255,255,255,0.08);
-}
-
-@media (min-width: 992px) {
-  .sidebar-modern {
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    width: 280px;
-    z-index: 1040; /* Higher than fixed-top header (1030) */
-  }
-  
-  .layout-wrapper {
-    margin-left: 280px;
-    transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  /* Fix Header Positioning */
-  .layout-wrapper .header-modern {
-    left: 280px;
-    width: calc(100% - 280px);
-  }
-
-  /* Collapsed State */
-  .sidebar-modern.collapsed {
-    width: 80px;
-  }
-  
-  .sidebar-modern.collapsed .nav-link-modern {
-     padding: 14px;
-     justify-content: center;
-  }
-  
-  .sidebar-modern.collapsed .nav-link-modern::before {
-     display: none;
-  }
-
-  .layout-wrapper.collapsed {
-    margin-left: 80px;
-  }
-
-  .layout-wrapper.collapsed .header-modern {
-    left: 80px;
-    width: calc(100% - 80px);
-  }
-}
-
-@media (max-width: 991.98px) {
-  .layout-wrapper {
-    margin-left: 0;
-  }
-}
-
-/* Table Enhancements */
-.table {
-  --bs-table-color: var(--text-main);
-  --bs-table-bg: transparent;
-  --bs-table-border-color: var(--border-color);
-}
-
-.table th {
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.5px;
   color: var(--text-muted);
-  border-bottom-width: 1px;
-}
-
-.table td {
-  vertical-align: middle;
-  padding: 1rem 0.75rem;
-}
-
-/* Dark Mode Overrides for Bootstrap Components */
-body.dark .dropdown-menu {
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-lg);
-  color: var(--text-main);
-}
-
-body.dark .dropdown-item {
-  color: var(--text-main);
-}
-
-body.dark .dropdown-item:hover,
-body.dark .dropdown-item:focus {
-  background-color: var(--sidebar-active-bg);
-  color: var(--text-main);
 }
 
 body.dark .dropdown-divider {
-  border-top-color: var(--border-color);
+  border-color: var(--border-color);
 }
 
-body.dark .table-hover > tbody > tr:hover > * {
+/* Notification Dropdown Specifics */
+body.dark .list-group-item {
+  background-color: var(--bg-card);
+  border-color: var(--border-color);
   color: var(--text-main);
-  background-color: var(--hover-bg);
-  box-shadow: inset 0 0 0 9999px transparent; /* Remove bootstrap override overlap */
 }
 
-/* Light Mode Table Hover */
-.table-hover > tbody > tr:hover > * {
+body.dark .list-group-item-action:hover,
+body.dark .list-group-item-action:focus {
   background-color: var(--hover-bg);
-  color: var(--hover-text);
-  transition: background-color 0.3s ease;
+  color: var(--text-main);
 }
 
-body.dark .text-muted {
+body.dark .list-group-item .text-muted {
   color: var(--text-muted) !important;
 }
 
-/* Ensure border-light doesn't look white in dark mode if used */
-body.dark .border-light {
-  border-color: var(--border-color) !important;
-}
-
-/* Ensure btn-light looks okay if we missed any */
-body.dark .btn-light {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-color: transparent;
+body.dark .list-group-item h6 {
   color: var(--text-main);
 }

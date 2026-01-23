@@ -2,6 +2,7 @@ const React = window.React;
 const { useState, useEffect } = React;
 const $ = window.jQuery;
 import config from '/src/config.js';
+import Users from '/src/Users.jsx';
 
 // --- Components ---
 
@@ -195,7 +196,7 @@ function Header({ title, onLogout, isDarkMode, toggleTheme, toggleSidebar }) {
   const unreadCount = notifications.filter(n => n.unread).length;
 
   return React.createElement('nav', { 
-    className: 'navbar navbar-expand-lg header-modern fixed-top px-3 py-3',
+    className: 'navbar navbar-expand-lg header-modern sticky-top px-3 py-3',
   },
     React.createElement('div', { className: 'container-fluid' }, [
       // Desktop Toggle Button
@@ -382,47 +383,7 @@ function DashboardContent({ activeMenu }) {
 
   // Users and Settings components remain similar but wrapped in modern-card...
   if (activeMenu === 'users') {
-    return React.createElement('div', { className: 'modern-card p-0 overflow-hidden animate-fade-in rounded-0 border-0 shadow-none' }, [
-      React.createElement('div', { className: 'p-4 border-bottom bg-modern-subtle' },
-        React.createElement('h5', { className: 'fw-bold mb-0' }, 'User Management')
-      ),
-      React.createElement('div', { className: 'table-responsive' },
-        React.createElement('table', { className: 'table table-hover align-middle mb-0' }, [
-          React.createElement('thead', { key: 'thead', className: 'bg-modern-subtle' },
-            React.createElement('tr', null, [
-              React.createElement('th', { className: 'ps-4 py-3' }, 'Name'),
-              React.createElement('th', { className: 'py-3' }, 'Email'),
-              React.createElement('th', { className: 'py-3' }, 'Role'),
-              React.createElement('th', { className: 'py-3' }, 'Status'),
-              React.createElement('th', { className: 'pe-4 py-3 text-end' }, 'Actions')
-            ])
-          ),
-          React.createElement('tbody', { key: 'tbody' }, 
-            [1, 2, 3, 4, 5].map((i, idx) => 
-              React.createElement('tr', { key: i, style: { animationDelay: `${idx * 0.05}s` }, className: 'animate-fade-in' }, [
-                React.createElement('td', { className: 'ps-4' }, 
-                  React.createElement('div', { className: 'd-flex align-items-center' }, [
-                    React.createElement('img', { src: `https://ui-avatars.com/api/?name=User+${i}&background=random`, className: 'rounded-circle me-3', width: '40', height: '40' }),
-                    React.createElement('div', null, [
-                      React.createElement('div', { className: 'fw-bold' }, `User ${i}`),
-                      React.createElement('div', { className: 'small text-muted' }, 'ID: #8923')
-                    ])
-                  ])
-                ),
-                React.createElement('td', null, `user${i}@example.com`),
-                React.createElement('td', null, React.createElement('span', { className: 'badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-3' }, 'Editor')),
-                React.createElement('td', null, React.createElement('span', { className: 'badge bg-success bg-opacity-10 text-success rounded-pill px-3' }, 'Active')),
-                React.createElement('td', { className: 'pe-4 text-end' }, 
-                  React.createElement('button', { className: 'btn btn-icon btn-sm btn-modern-light rounded-circle text-muted' }, 
-                    React.createElement('i', { className: 'fa-solid fa-pen' })
-                  )
-                )
-              ])
-            )
-          )
-        ])
-      )
-    ]);
+    return React.createElement(Users);
   }
   
   // Minimal placeholder for settings to keep it working
@@ -459,7 +420,7 @@ function DashboardLayout({ onLogout, isDarkMode, toggleTheme }) {
       React.createElement('main', { 
         key: 'main', 
         className: 'flex-grow-1', // Removed padding to make content full width/height
-        style: { marginTop: '80px' } 
+        style: { marginTop: '0' } 
       }, 
         React.createElement(DashboardContent, { activeMenu: activeMenu })
       )
@@ -468,8 +429,8 @@ function DashboardLayout({ onLogout, isDarkMode, toggleTheme }) {
 }
 
 function LoginPage({ onLogin, isDarkMode, toggleTheme }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('admin@example.com');
+  const [password, setPassword] = useState('password123');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 

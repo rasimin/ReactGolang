@@ -37,9 +37,32 @@ type LoginResponse struct {
 }
 
 type User struct {
-	ID             int    `json:"id"`
-	Email          string `json:"email"`
-	ProfilePicture string `json:"profilePicture"`
+	ID                  int        `json:"id"`
+	Email               string     `json:"email"`
+	Name                string     `json:"name"`
+	Role                string     `json:"role"`
+	IsActive            bool       `json:"isActive"`
+	ProfilePicture      string     `json:"profilePicture"`
+	LastLogin           *time.Time `json:"lastLogin"`
+	LastLogout          *time.Time `json:"lastLogout"`
+	FailedLoginAttempts int        `json:"failedLoginAttempts"`
+}
+
+type CreateUserRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	Name     string `json:"name"`
+	Role     string `json:"role"`
+	IsActive bool   `json:"isActive"`
+}
+
+type UpdateUserRequest struct {
+	ID       int    `json:"id"`
+	Email    string `json:"email"`
+	Name     string `json:"name"`
+	Role     string `json:"role"`
+	IsActive bool   `json:"isActive"`
+	Password string `json:"password,omitempty"` // Optional for update
 }
 
 type ChangePasswordRequest struct {
@@ -58,6 +81,10 @@ func migrateDB() {
 		 ALTER TABLE Users ADD LastLogout DATETIME NULL;`,
 		`IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'FailedLoginAttempts' AND Object_ID = Object_ID(N'Users'))
 		 ALTER TABLE Users ADD FailedLoginAttempts INT DEFAULT 0 WITH VALUES;`,
+		`IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'Name' AND Object_ID = Object_ID(N'Users'))
+		 ALTER TABLE Users ADD Name NVARCHAR(100) DEFAULT 'User' WITH VALUES;`,
+		`IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'Role' AND Object_ID = Object_ID(N'Users'))
+		 ALTER TABLE Users ADD Role VARCHAR(50) DEFAULT 'user' WITH VALUES;`,
 	}
 
 	for _, q := range queries {
@@ -152,9 +179,9 @@ func initDB() {
 
 func enableCORS(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", appConfig.CORS.AllowedOrigins)
-		w.Header().Set("Access-Control-Allow-Methods", appConfig.CORS.AllowedMethods)
-		w.Header().Set("Access-Control-Allow-Headers", appConfig.CORS.AllowedHeaders)
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept, Origin, X-Requested-With, Cache-Control")
 
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
@@ -457,6 +484,155 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "Logout successful"})
 }
 
+// --- CRUD USERS HANDLERS ---
+
+func getUsersHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	rows, err := db.Query("SELECT ID, Email, Name, Role, IsActive, ProfilePicture, LastLogin, LastLogout, FailedLoginAttempts FROM Users")
+	if err != nil {
+		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var users []User
+	for rows.Next() {
+		var u User
+		var pp sql.NullString
+		var lastLogin, lastLogout sql.NullTime
+
+		if err := rows.Scan(&u.ID, &u.Email, &u.Name, &u.Role, &u.IsActive, &pp, &lastLogin, &lastLogout, &u.FailedLoginAttempts); err != nil {
+			log.Printf("Error scanning user: %v", err)
+			continue
+		}
+		if pp.Valid {
+			u.ProfilePicture = pp.String
+		}
+		if lastLogin.Valid {
+			t := lastLogin.Time
+			u.LastLogin = &t
+		}
+		if lastLogout.Valid {
+			t := lastLogout.Time
+			u.LastLogout = &t
+		}
+		users = append(users, u)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
+}
+
+func createUserHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req CreateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	// Check if email exists
+	var exists int
+	db.QueryRow("SELECT COUNT(*) FROM Users WHERE Email = @p1", req.Email).Scan(&exists)
+	if exists > 0 {
+		http.Error(w, "Email already exists", http.StatusConflict)
+		return
+	}
+
+	// Hash password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		http.Error(w, "Error hashing password", http.StatusInternalServerError)
+		return
+	}
+
+	// Insert
+	_, err = db.Exec(`INSERT INTO Users (Email, Password, Name, Role, IsActive, CreatedAt) 
+		VALUES (@p1, @p2, @p3, @p4, @p5, GETDATE())`,
+		req.Email, string(hashedPassword), req.Name, req.Role, req.IsActive)
+
+	if err != nil {
+		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	logActivity(r.Header.Get("X-User-Email"), "CREATE_USER", "Created user "+req.Email)
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"message": "User created successfully"})
+}
+
+func updateUserHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req UpdateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	// Update query
+	query := `UPDATE Users SET Name=@p1, Role=@p2, IsActive=@p3, Email=@p4, UpdatedAt=GETDATE()`
+	params := []interface{}{req.Name, req.Role, req.IsActive, req.Email}
+
+	// Update password if provided
+	if req.Password != "" {
+		hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			http.Error(w, "Error hashing password", http.StatusInternalServerError)
+			return
+		}
+		query += `, Password=@p5`
+		params = append(params, string(hashed))
+		query += ` WHERE ID=@p6`
+		params = append(params, req.ID)
+	} else {
+		query += ` WHERE ID=@p5`
+		params = append(params, req.ID)
+	}
+
+	_, err := db.Exec(query, params...)
+	if err != nil {
+		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	logActivity(r.Header.Get("X-User-Email"), "UPDATE_USER", fmt.Sprintf("Updated user ID %d", req.ID))
+	json.NewEncoder(w).Encode(map[string]string{"message": "User updated successfully"})
+}
+
+func deleteUserHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	idStr := r.URL.Query().Get("id")
+	if idStr == "" {
+		http.Error(w, "Missing id parameter", http.StatusBadRequest)
+		return
+	}
+
+	_, err := db.Exec("DELETE FROM Users WHERE ID = @p1", idStr)
+	if err != nil {
+		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	logActivity(r.Header.Get("X-User-Email"), "DELETE_USER", "Deleted user ID "+idStr)
+	json.NewEncoder(w).Encode(map[string]string{"message": "User deleted successfully"})
+}
+
 func main() {
 	// Load Configuration
 	var err error
@@ -493,6 +669,21 @@ func main() {
 	mux.HandleFunc("/change-password", enableCORS(authMiddleware(changePasswordHandler)))
 	mux.HandleFunc("/upload-picture", enableCORS(authMiddleware(uploadHandler)))
 	mux.HandleFunc("/logout", enableCORS(authMiddleware(logoutHandler)))
+
+	// User CRUD Routes
+	mux.HandleFunc("/api/users", enableCORS(authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			getUsersHandler(w, r)
+		} else if r.Method == http.MethodPost {
+			createUserHandler(w, r)
+		} else if r.Method == http.MethodPut {
+			updateUserHandler(w, r)
+		} else if r.Method == http.MethodDelete {
+			deleteUserHandler(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
 
 	// Frontend Static Files
 	// Assumes react-pertama is at ../react-pertama
