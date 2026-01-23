@@ -97,16 +97,16 @@ func migrateDB() {
 }
 
 func seedDB() {
-	var count int
-	// Check if table is empty
-	err := db.QueryRow("SELECT COUNT(*) FROM Users").Scan(&count)
+	var adminExists int
+	// Check if admin user exists specifically
+	err := db.QueryRow("SELECT CASE WHEN EXISTS(SELECT 1 FROM Users WHERE Email = 'admin@example.com') THEN 1 ELSE 0 END").Scan(&adminExists)
 	if err != nil {
-		log.Printf("Error checking users table: %v", err)
+		log.Printf("Error checking for admin user: %v", err)
 		return
 	}
 
-	if count == 0 {
-		log.Println("Users table is empty. Seeding default admin user...")
+	if adminExists == 0 {
+		log.Println("Admin user missing. Seeding default admin user...")
 
 		password := "password123"
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -138,10 +138,12 @@ func seedDB() {
 		}
 
 		log.Println("---------------------------------------------------------")
-		log.Println("DEFAULT USER CREATED SUCCESSFULLY")
+		log.Println("DEFAULT USER RESTORED SUCCESSFULLY")
 		log.Println("Email:    admin@example.com")
 		log.Println("Password: password123")
 		log.Println("---------------------------------------------------------")
+	} else {
+		log.Println("Admin user already exists. Skipping seed.")
 	}
 }
 

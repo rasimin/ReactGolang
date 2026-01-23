@@ -8,6 +8,8 @@ export default function Users() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
   const [modalMode, setModalMode] = useState('add'); // 'add' or 'edit'
   const [currentUser, setCurrentUser] = useState({
     id: 0,
@@ -86,16 +88,24 @@ export default function Users() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
+  const confirmDelete = (user) => {
+    setUserToDelete(user);
+    setShowDeleteModal(true);
+  };
+
+  const handleDelete = async () => {
+    if (!userToDelete) return;
+    
     try {
-      const response = await fetch(`${config.api.baseUrl}/api/users?id=${id}`, {
+      const response = await fetch(`${config.api.baseUrl}/api/users?id=${userToDelete.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
         }
       });
       if (!response.ok) throw new Error('Failed to delete user');
+      setShowDeleteModal(false);
+      setUserToDelete(null);
       fetchUsers();
     } catch (err) {
       alert(err.message);
@@ -177,7 +187,7 @@ export default function Users() {
                         React.createElement('button', { className: 'btn btn-sm btn-link text-primary', onClick: () => openEditModal(user) }, 
                             React.createElement('i', { className: 'fa-solid fa-pen-to-square' })
                         ),
-                        React.createElement('button', { className: 'btn btn-sm btn-link text-danger', onClick: () => handleDelete(user.id) }, 
+                        React.createElement('button', { className: 'btn btn-sm btn-link text-danger', onClick: () => confirmDelete(user) }, 
                             React.createElement('i', { className: 'fa-solid fa-trash' })
                         )
                     ])
@@ -188,16 +198,16 @@ export default function Users() {
       ),
 
       // Modal Backdrop (Using Portal)
-      showModal && ReactDOM.createPortal(
+      (showModal || showDeleteModal) && ReactDOM.createPortal(
         React.createElement('div', { 
             key: 'backdrop', 
             className: 'modal-backdrop fade show',
-            style: { zIndex: 1050 } 
+            style: { zIndex: 1050, backdropFilter: 'blur(4px)' } 
         }), 
         document.body
       ),
 
-      // Modal (Using Portal)
+      // Add/Edit Modal (Using Portal)
       showModal && ReactDOM.createPortal(
         React.createElement('div', { 
             key: 'modal', 
@@ -207,50 +217,83 @@ export default function Users() {
             role: 'dialog'
         }, 
           React.createElement('div', { className: 'modal-dialog modal-dialog-centered' }, 
-              React.createElement('div', { className: 'modal-content border-0 shadow-lg' }, [
+              React.createElement('div', { className: 'modal-content border-0 shadow-lg animate-fade-in overflow-hidden', style: { borderRadius: '20px' } }, [
                   // Modal Header
-                  React.createElement('div', { className: 'modal-header border-bottom-0' }, [
-                      React.createElement('h5', { className: 'modal-title fw-bold' }, modalMode === 'add' ? 'Add User' : 'Edit User'),
+                  React.createElement('div', { className: 'modal-header border-bottom-0 bg-light' }, [
+                      React.createElement('h5', { className: 'modal-title fw-bold' }, modalMode === 'add' ? 'Add New User' : 'Edit User'),
                       React.createElement('button', { type: 'button', className: 'btn-close', onClick: () => setShowModal(false) })
                   ]),
                   // Modal Body
-                  React.createElement('div', { className: 'modal-body' }, 
+                  React.createElement('div', { className: 'modal-body p-4' }, 
                       React.createElement('form', null, [
                           React.createElement('div', { className: 'mb-3' }, [
-                              React.createElement('label', { className: 'form-label small fw-bold' }, 'Name'),
-                              React.createElement('input', { type: 'text', className: 'form-control', value: currentUser.name, onChange: e => setCurrentUser({...currentUser, name: e.target.value}) })
+                              React.createElement('label', { className: 'form-label small fw-bold text-muted' }, 'Full Name'),
+                              React.createElement('input', { type: 'text', className: 'form-control form-control-modern', placeholder: 'e.g. John Doe', value: currentUser.name, onChange: e => setCurrentUser({...currentUser, name: e.target.value}) })
                           ]),
                           React.createElement('div', { className: 'mb-3' }, [
-                              React.createElement('label', { className: 'form-label small fw-bold' }, 'Email'),
-                              React.createElement('input', { type: 'email', className: 'form-control', value: currentUser.email, onChange: e => setCurrentUser({...currentUser, email: e.target.value}) })
+                              React.createElement('label', { className: 'form-label small fw-bold text-muted' }, 'Email Address'),
+                              React.createElement('input', { type: 'email', className: 'form-control form-control-modern', placeholder: 'e.g. john@example.com', value: currentUser.email, onChange: e => setCurrentUser({...currentUser, email: e.target.value}) })
                           ]),
-                          React.createElement('div', { className: 'mb-3' }, [
-                              React.createElement('label', { className: 'form-label small fw-bold' }, 'Role'),
-                              React.createElement('select', { className: 'form-select', value: currentUser.role, onChange: e => setCurrentUser({...currentUser, role: e.target.value}) }, [
-                                  React.createElement('option', { value: 'user' }, 'User'),
-                                  React.createElement('option', { value: 'admin' }, 'Admin')
+                          React.createElement('div', { className: 'row' }, [
+                              React.createElement('div', { className: 'col-md-6 mb-3' }, [
+                                  React.createElement('label', { className: 'form-label small fw-bold text-muted' }, 'Role'),
+                                  React.createElement('select', { className: 'form-select form-control-modern', value: currentUser.role, onChange: e => setCurrentUser({...currentUser, role: e.target.value}) }, [
+                                      React.createElement('option', { value: 'user' }, 'User'),
+                                      React.createElement('option', { value: 'admin' }, 'Admin')
+                                  ])
+                              ]),
+                              React.createElement('div', { className: 'col-md-6 mb-3' }, [
+                                  React.createElement('label', { className: 'form-label small fw-bold text-muted' }, 'Status'),
+                                  React.createElement('div', { className: 'form-check form-switch mt-2' }, [
+                                      React.createElement('input', { 
+                                          type: 'checkbox', 
+                                          className: 'form-check-input', 
+                                          id: 'isActiveCheck', 
+                                          checked: currentUser.isActive, 
+                                          onChange: e => setCurrentUser({...currentUser, isActive: e.target.checked}) 
+                                      }),
+                                      React.createElement('label', { className: 'form-check-label small', htmlFor: 'isActiveCheck' }, currentUser.isActive ? 'Active' : 'Inactive')
+                                  ])
                               ])
                           ]),
-                          React.createElement('div', { className: 'mb-3 form-check form-switch' }, [
-                              React.createElement('input', { 
-                                  type: 'checkbox', 
-                                  className: 'form-check-input', 
-                                  id: 'isActiveCheck', 
-                                  checked: currentUser.isActive, 
-                                  onChange: e => setCurrentUser({...currentUser, isActive: e.target.checked}) 
-                              }),
-                              React.createElement('label', { className: 'form-check-label small', htmlFor: 'isActiveCheck' }, 'Active Account')
-                          ]),
                           React.createElement('div', { className: 'mb-3' }, [
-                              React.createElement('label', { className: 'form-label small fw-bold' }, modalMode === 'edit' ? 'New Password (leave blank to keep)' : 'Password'),
-                              React.createElement('input', { type: 'password', className: 'form-control', value: currentUser.password, onChange: e => setCurrentUser({...currentUser, password: e.target.value}) })
+                              React.createElement('label', { className: 'form-label small fw-bold text-muted' }, modalMode === 'edit' ? 'New Password (Optional)' : 'Password'),
+                              React.createElement('input', { type: 'password', className: 'form-control form-control-modern', placeholder: '••••••••', value: currentUser.password, onChange: e => setCurrentUser({...currentUser, password: e.target.value}) })
                           ])
                       ])
                   ),
                   // Modal Footer
-                  React.createElement('div', { className: 'modal-footer border-top-0' }, [
-                      React.createElement('button', { type: 'button', className: 'btn btn-light', onClick: () => setShowModal(false) }, 'Cancel'),
-                      React.createElement('button', { type: 'button', className: 'btn btn-primary', onClick: handleSave }, 'Save')
+                  React.createElement('div', { className: 'modal-footer border-top-0 bg-light' }, [
+                      React.createElement('button', { type: 'button', className: 'btn btn-light rounded-pill px-4', onClick: () => setShowModal(false) }, 'Cancel'),
+                      React.createElement('button', { type: 'button', className: 'btn btn-primary rounded-pill px-4 btn-primary-modern', onClick: handleSave }, 'Save Changes')
+                  ])
+              ])
+          )
+        ),
+        document.body
+      ),
+
+      // Delete Confirmation Modal
+      showDeleteModal && ReactDOM.createPortal(
+        React.createElement('div', { 
+            key: 'delete-modal', 
+            className: 'modal fade show d-block', 
+            tabIndex: '-1',
+            style: { zIndex: 1060, display: 'block' },
+            role: 'dialog'
+        }, 
+          React.createElement('div', { className: 'modal-dialog modal-dialog-centered modal-sm' }, 
+              React.createElement('div', { className: 'modal-content border-0 shadow-lg animate-fade-in text-center p-4', style: { borderRadius: '24px' } }, [
+                  React.createElement('div', { className: 'mb-3' }, 
+                    React.createElement('div', { className: 'rounded-circle bg-danger bg-opacity-10 d-inline-flex align-items-center justify-content-center', style: { width: '64px', height: '64px' } },
+                        React.createElement('i', { className: 'fa-solid fa-triangle-exclamation text-danger fs-3' })
+                    )
+                  ),
+                  React.createElement('h5', { className: 'fw-bold mb-2' }, 'Delete User?'),
+                  React.createElement('p', { className: 'text-muted small mb-4' }, `Are you sure you want to delete "${userToDelete?.name}"? This action cannot be undone.`),
+                  React.createElement('div', { className: 'd-flex gap-2 justify-content-center' }, [
+                      React.createElement('button', { type: 'button', className: 'btn btn-light rounded-pill px-4 w-50', onClick: () => setShowDeleteModal(false) }, 'Cancel'),
+                      React.createElement('button', { type: 'button', className: 'btn btn-danger rounded-pill px-4 w-50', onClick: handleDelete }, 'Delete')
                   ])
               ])
           )
