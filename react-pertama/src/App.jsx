@@ -3,6 +3,7 @@ const { useState, useEffect } = React;
 const $ = window.jQuery;
 import config from '/src/config.js';
 import Users from '/src/Users.jsx';
+import ChangePassword from '/src/ChangePassword.jsx';
 
 // --- Components ---
 
@@ -184,7 +185,7 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
   ]);
 }
 
-function Header({ title, onLogout, isDarkMode, toggleTheme, toggleSidebar }) {
+function Header({ title, onLogout, isDarkMode, toggleTheme, toggleSidebar, setActiveMenu }) {
   // Dummy Notification Data
   const notifications = [
     { id: 1, title: 'New Order #1023', time: '5m ago', icon: 'fa-box', color: 'primary', unread: true },
@@ -313,7 +314,14 @@ function Header({ title, onLogout, isDarkMode, toggleTheme, toggleSidebar }) {
               React.createElement('li', { key: 'profile' }, React.createElement('a', { className: 'dropdown-item rounded-2', href: '#' }, [
                 React.createElement('i', { className: 'fa-regular fa-user me-2' }), 'My Profile'
               ])),
-              React.createElement('li', { key: 'pw' }, React.createElement('a', { className: 'dropdown-item rounded-2', href: '#' }, [
+              React.createElement('li', { key: 'pw' }, React.createElement('a', { 
+                className: 'dropdown-item rounded-2', 
+                href: '#',
+                onClick: (e) => {
+                  e.preventDefault();
+                  setActiveMenu('security');
+                }
+              }, [
                 React.createElement('i', { className: 'fa-solid fa-lock me-2' }), 'Security'
               ])),
               React.createElement('li', { key: 'div' }, React.createElement('hr', { className: 'dropdown-divider my-2' })),
@@ -385,6 +393,10 @@ function DashboardContent({ activeMenu }) {
   if (activeMenu === 'users') {
     return React.createElement(Users);
   }
+
+  if (activeMenu === 'security') {
+    return React.createElement(ChangePassword);
+  }
   
   // Minimal placeholder for settings to keep it working
   if (activeMenu === 'settings') return React.createElement('div', { className: 'modern-card p-4 animate-fade-in' }, 'Settings Page');
@@ -415,7 +427,8 @@ function DashboardLayout({ onLogout, isDarkMode, toggleTheme }) {
         onLogout: onLogout,
         isDarkMode: isDarkMode,
         toggleTheme: toggleTheme,
-        toggleSidebar: toggleSidebar
+        toggleSidebar: toggleSidebar,
+        setActiveMenu: setActiveMenu
       }),
       React.createElement('main', { 
         key: 'main', 

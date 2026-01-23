@@ -10,6 +10,7 @@ export default function Users() {
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [modalMode, setModalMode] = useState('add'); // 'add' or 'edit'
   const [currentUser, setCurrentUser] = useState({
     id: 0,
@@ -134,13 +135,32 @@ export default function Users() {
   if (loading) return React.createElement('div', null, 'Loading...');
   if (error) return React.createElement('div', null, `Error: ${error}`);
 
+  const filteredUsers = users.filter(user => 
+    user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return React.createElement('div', { className: 'modern-card p-0 overflow-hidden animate-fade-in rounded-0 border-0 shadow-none' }, [
       // Header
-      React.createElement('div', { key: 'header', className: 'p-4 border-bottom bg-modern-subtle d-flex justify-content-between align-items-center' }, [
+      React.createElement('div', { key: 'header', className: 'p-4 border-bottom bg-modern-subtle d-flex flex-wrap gap-3 justify-content-between align-items-center' }, [
         React.createElement('h5', { className: 'fw-bold mb-0' }, 'User Management'),
-        React.createElement('button', { className: 'btn btn-primary btn-sm', onClick: openAddModal }, [
-            React.createElement('i', { className: 'fa-solid fa-plus me-2' }),
-            'Add User'
+        React.createElement('div', { className: 'd-flex gap-3 align-items-center' }, [
+            // Modern Search Input
+            React.createElement('div', { className: 'search-container-modern' }, [
+                React.createElement('i', { className: 'fa-solid fa-magnifying-glass text-muted small' }),
+                React.createElement('input', { 
+                    type: 'text', 
+                    className: 'search-input-modern', 
+                    placeholder: 'Search users...',
+                    value: searchQuery,
+                    onChange: (e) => setSearchQuery(e.target.value)
+                })
+            ]),
+            // Modern Add Button
+            React.createElement('button', { className: 'btn-add-modern', onClick: openAddModal }, [
+                React.createElement('i', { className: 'fa-solid fa-plus' }),
+                'Add User'
+            ])
         ])
       ]),
       
@@ -157,7 +177,7 @@ export default function Users() {
             ])
           ),
           React.createElement('tbody', null, 
-            users.map(user => 
+            filteredUsers.length > 0 ? filteredUsers.map(user => 
                 React.createElement('tr', { key: user.id }, [
                     // Name Column
                     React.createElement('td', { className: 'ps-4' }, 
@@ -191,6 +211,11 @@ export default function Users() {
                             React.createElement('i', { className: 'fa-solid fa-trash' })
                         )
                     ])
+                ])
+            ) : React.createElement('tr', null, 
+                React.createElement('td', { colSpan: 5, className: 'text-center py-5 text-muted' }, [
+                    React.createElement('i', { className: 'fa-solid fa-magnifying-glass mb-3 fs-3 d-block opacity-50' }),
+                    'No users found matching your search'
                 ])
             )
           )
