@@ -15,6 +15,7 @@ import (
 	"go-pertama/config"
 
 	_ "github.com/microsoft/go-mssqldb"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // Global configuration
@@ -46,6 +47,77 @@ type ChangePasswordRequest struct {
 	NewPassword string `json:"newPassword"`
 }
 
+func migrateDB() {
+	// Add new columns if they don't exist
+	queries := []string{
+		`IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'IsActive' AND Object_ID = Object_ID(N'Users'))
+		 ALTER TABLE Users ADD IsActive BIT DEFAULT 1 WITH VALUES;`,
+		`IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'LastLogin' AND Object_ID = Object_ID(N'Users'))
+		 ALTER TABLE Users ADD LastLogin DATETIME NULL;`,
+		`IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'LastLogout' AND Object_ID = Object_ID(N'Users'))
+		 ALTER TABLE Users ADD LastLogout DATETIME NULL;`,
+		`IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'FailedLoginAttempts' AND Object_ID = Object_ID(N'Users'))
+		 ALTER TABLE Users ADD FailedLoginAttempts INT DEFAULT 0 WITH VALUES;`,
+	}
+
+	for _, q := range queries {
+		_, err := db.Exec(q)
+		if err != nil {
+			log.Printf("Migration warning: %v", err)
+		}
+	}
+	log.Println("Database migration checked/completed.")
+}
+
+func seedDB() {
+	var count int
+	// Check if table is empty
+	err := db.QueryRow("SELECT COUNT(*) FROM Users").Scan(&count)
+	if err != nil {
+		log.Printf("Error checking users table: %v", err)
+		return
+	}
+
+	if count == 0 {
+		log.Println("Users table is empty. Seeding default admin user...")
+
+		password := "password123"
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			log.Printf("Error hashing password: %v", err)
+			return
+		}
+
+		// Try to insert with Name and Role first
+		// We use dynamic SQL or try-catch logic here by attempting insert
+		query := `
+			INSERT INTO Users (Email, Password, Name, Role, IsActive, CreatedAt)
+			VALUES ('admin@example.com', @p1, 'Admin User', 'admin', 1, GETDATE())
+		`
+		_, err = db.Exec(query, string(hashedPassword))
+		if err != nil {
+			log.Printf("Failed to seed with Name/Role columns: %v. Retrying with basic columns...", err)
+
+			// Fallback to basic columns if Name/Role don't exist
+			queryBasic := `
+				INSERT INTO Users (Email, Password, IsActive)
+				VALUES ('admin@example.com', @p1, 1)
+			`
+			_, err = db.Exec(queryBasic, string(hashedPassword))
+			if err != nil {
+				log.Printf("Failed to seed database: %v", err)
+				return
+			}
+		}
+
+		log.Println("---------------------------------------------------------")
+		log.Println("DEFAULT USER CREATED SUCCESSFULLY")
+		log.Println("Email:    admin@example.com")
+		log.Println("Password: password123")
+		log.Println("---------------------------------------------------------")
+	}
+}
+
 func initDB() {
 	// Connection string (DSN format)
 	connString := fmt.Sprintf("server=%s;user id=%s;password=%s;database=%s",
@@ -73,6 +145,8 @@ func initDB() {
 		fmt.Println("Please ensure SQL Server is running, TCP/IP is enabled, and the database exists.")
 	} else {
 		fmt.Println("Successfully connected to SQL Server!")
+		migrateDB()
+		seedDB()
 	}
 }
 
@@ -156,10 +230,12 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	var storedPassword string
 	var id int
 	var profilePicture sql.NullString
+	var isActive bool
+	var failedAttempts int
 
-	query := "SELECT ID, Password, ProfilePicture FROM Users WHERE Email = @p1"
+	query := "SELECT ID, Password, ProfilePicture, IsActive, FailedLoginAttempts FROM Users WHERE Email = @p1"
 
-	err = db.QueryRow(query, creds.Email).Scan(&id, &storedPassword, &profilePicture)
+	err = db.QueryRow(query, creds.Email).Scan(&id, &storedPassword, &profilePicture, &isActive, &failedAttempts)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -178,7 +254,40 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if storedPassword == creds.Password {
+	if !isActive {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(LoginResponse{
+			Message: "Account is inactive. Please contact support.",
+			Success: false,
+		})
+		return
+	}
+
+	// Verify Password (Check Hash first, then Plain Text fallback)
+	passwordMatch := false
+	isPlainText := false
+
+	err = bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(creds.Password))
+	if err == nil {
+		passwordMatch = true
+	} else {
+		// Fallback: Check if it's a legacy plain text password
+		if storedPassword == creds.Password {
+			passwordMatch = true
+			isPlainText = true
+		}
+	}
+
+	if passwordMatch {
+		// Reset failed attempts and update LastLogin
+		db.Exec("UPDATE Users SET FailedLoginAttempts = 0, LastLogin = GETDATE() WHERE ID = @p1", id)
+
+		// If it was plain text, migrate to bcrypt hash automatically
+		if isPlainText {
+			hashed, _ := bcrypt.GenerateFromPassword([]byte(creds.Password), bcrypt.DefaultCost)
+			db.Exec("UPDATE Users SET Password = @p1 WHERE ID = @p2", string(hashed), id)
+		}
+
 		// Login successful
 		token := fmt.Sprintf("sql-jwt-token-%s-secret-%s", creds.Email, strings.Split(appConfig.JWT.Secret, "-")[0])
 
@@ -200,7 +309,11 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			},
 		})
 	} else {
-		logActivity(creds.Email, "LOGIN_FAILED", "Wrong password")
+		// Increment failed attempts
+		newAttempts := failedAttempts + 1
+		db.Exec("UPDATE Users SET FailedLoginAttempts = @p1 WHERE ID = @p2", newAttempts, id)
+
+		logActivity(creds.Email, "LOGIN_FAILED", fmt.Sprintf("Wrong password. Attempt: %d", newAttempts))
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(LoginResponse{
 			Message: "Invalid credentials (Wrong password)",
@@ -231,13 +344,25 @@ func changePasswordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if currentPassword != req.OldPassword {
-		http.Error(w, "Incorrect old password", http.StatusUnauthorized)
+	// Verify old password (Hash or Plain)
+	err = bcrypt.CompareHashAndPassword([]byte(currentPassword), []byte(req.OldPassword))
+	if err != nil {
+		// Try plain text
+		if currentPassword != req.OldPassword {
+			http.Error(w, "Incorrect old password", http.StatusUnauthorized)
+			return
+		}
+	}
+
+	// Hash new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		http.Error(w, "Error hashing password", http.StatusInternalServerError)
 		return
 	}
 
 	// Update password
-	_, err = db.Exec("UPDATE Users SET Password = @p1, UpdatedAt = GETDATE() WHERE Email = @p2", req.NewPassword, email)
+	_, err = db.Exec("UPDATE Users SET Password = @p1, UpdatedAt = GETDATE() WHERE Email = @p2", string(hashedPassword), email)
 	if err != nil {
 		http.Error(w, "Failed to update password", http.StatusInternalServerError)
 		return
@@ -319,6 +444,13 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	email := r.Header.Get("X-User-Email")
+
+	// Update LastLogout
+	_, err := db.Exec("UPDATE Users SET LastLogout = GETDATE() WHERE Email = @p1", email)
+	if err != nil {
+		log.Printf("Failed to update LastLogout for %s: %v", email, err)
+	}
+
 	logActivity(email, "LOGOUT", "User logged out")
 
 	w.Header().Set("Content-Type", "application/json")
