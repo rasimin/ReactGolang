@@ -5,6 +5,7 @@ import config from '/src/config.js';
 import Users from '/src/Users.jsx';
 import Config from '/src/Config.jsx';
 import ChangePassword from '/src/ChangePassword.jsx';
+import Toast from '/src/Toast.jsx';
 
 // --- Components ---
 
@@ -395,7 +396,7 @@ function DashboardStats() {
   );
 }
 
-function DashboardContent({ activeMenu }) {
+function DashboardContent({ activeMenu, showToast }) {
   if (activeMenu === 'dashboard') {
     return React.createElement('div', { className: 'p-4' }, [
       React.createElement(DashboardStats, { key: 'stats' }),
@@ -413,18 +414,18 @@ function DashboardContent({ activeMenu }) {
 
   // Users and Settings components remain similar but wrapped in modern-card...
   if (activeMenu === 'users') {
-    return React.createElement(Users);
+    return React.createElement(Users, { showToast });
   }
   
   // Minimal placeholder for settings to keep it working
   if (activeMenu === 'settings') return React.createElement('div', { className: 'modern-card p-4 animate-fade-in' }, 'Settings Page');
   
-  if (activeMenu === 'config') return React.createElement(Config);
+  if (activeMenu === 'config') return React.createElement(Config, { showToast });
   
   return null;
 }
 
-function DashboardLayout({ onLogout, isDarkMode, toggleTheme, togglePasswordModal }) {
+function DashboardLayout({ onLogout, isDarkMode, toggleTheme, togglePasswordModal, showToast }) {
   // Initialize from localStorage to persist state across refreshes
   const [activeMenu, setActiveMenu] = useState(() => {
     return localStorage.getItem('activeMenu') || 'dashboard';
@@ -465,7 +466,7 @@ function DashboardLayout({ onLogout, isDarkMode, toggleTheme, togglePasswordModa
         className: 'flex-grow-1', // Removed padding to make content full width/height
         style: { marginTop: '0' } 
       }, 
-        React.createElement(DashboardContent, { activeMenu: activeMenu })
+        React.createElement(DashboardContent, { activeMenu: activeMenu, showToast: showToast })
       )
     ])
   ]);
@@ -597,6 +598,21 @@ function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [toasts, setToasts] = useState([]);
+
+  const showToast = (message, type = 'success') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+      removeToast(id);
+    }, 3000);
+  };
+
+  const removeToast = (id) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
 
   // Check login status on mount
   useEffect(() => {
@@ -680,12 +696,18 @@ function App() {
       onLogout: handleLogout,
       isDarkMode: isDarkMode,
       toggleTheme: toggleTheme,
-      togglePasswordModal: togglePasswordModal
+      togglePasswordModal: togglePasswordModal,
+      showToast: showToast
     }),
     React.createElement(ChangePassword, { 
       key: 'pw-modal',
       isOpen: isPasswordModalOpen, 
       onClose: () => setIsPasswordModalOpen(false) 
+    }),
+    React.createElement(Toast, {
+      key: 'toast-container',
+      toasts: toasts,
+      removeToast: removeToast
     })
   ]);
 }

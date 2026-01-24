@@ -3,7 +3,7 @@ const ReactDOM = window.ReactDOM; // Add ReactDOM
 import config from './config.js';
 const { useState, useEffect } = React;
 
-export default function Users() {
+export default function Users({ showToast }) {
   const [users, setUsers] = useState([]);
   const [totalUsers, setTotalUsers] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -79,7 +79,8 @@ export default function Users() {
       const body = { ...currentUser };
       
       if (modalMode === 'add' && !body.password) {
-          alert("Password is required for new users");
+          if (showToast) showToast("Password is required for new users", 'error');
+          else alert("Password is required for new users");
           return;
       }
 
@@ -101,10 +102,13 @@ export default function Users() {
           throw new Error(errData.message || 'Failed to save user');
       }
 
+      if (showToast) showToast(modalMode === 'add' ? 'User added successfully' : 'User updated successfully', 'success');
+      else alert(modalMode === 'add' ? 'User added successfully' : 'User updated successfully');
       setShowModal(false);
       fetchUsers();
     } catch (err) {
-      alert(err.message);
+      if (showToast) showToast(err.message, 'error');
+      else alert(err.message);
     }
   };
 
@@ -124,11 +128,14 @@ export default function Users() {
         }
       });
       if (!response.ok) throw new Error('Failed to delete user');
+      if (showToast) showToast('User deleted successfully', 'success');
+      else alert('User deleted successfully');
       setShowDeleteModal(false);
       setUserToDelete(null);
       fetchUsers();
     } catch (err) {
-      alert(err.message);
+      if (showToast) showToast(err.message, 'error');
+      else alert(err.message);
     }
   };
 

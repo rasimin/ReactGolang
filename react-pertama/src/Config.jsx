@@ -3,7 +3,7 @@ const ReactDOM = window.ReactDOM;
 import config from './config.js';
 const { useState, useEffect } = React;
 
-export default function Config() {
+export default function Config({ showToast }) {
   const [configs, setConfigs] = useState([]);
   const [totalConfigs, setTotalConfigs] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -96,10 +96,13 @@ export default function Config() {
         throw new Error(errData.message || 'Failed to save config');
       }
 
+      if (showToast) showToast(modalMode === 'add' ? 'Config added successfully' : 'Config updated successfully', 'success');
+      else alert(modalMode === 'add' ? 'Config added successfully' : 'Config updated successfully');
       setShowModal(false);
       fetchConfigs();
     } catch (err) {
-      alert(String(err.message));
+      if (showToast) showToast(String(err.message), 'error');
+      else alert(String(err.message));
     }
   };
 
@@ -121,6 +124,7 @@ export default function Config() {
       
       if (!response.ok) throw new Error('Failed to delete config');
       
+      alert('Config deleted successfully');
       setShowDeleteModal(false);
       setConfigToDelete(null);
       fetchConfigs();
@@ -142,7 +146,8 @@ export default function Config() {
       const data = await response.json();
       setHistoryData(Array.isArray(data) ? data : []);
     } catch (err) {
-      alert(String(err.message));
+      if (showToast) showToast(String(err.message), 'error');
+      else alert(String(err.message));
     } finally {
       setHistoryLoading(false);
     }
