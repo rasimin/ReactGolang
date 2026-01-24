@@ -6,6 +6,7 @@ import Users from '/src/Users.jsx';
 import Config from '/src/Config.jsx';
 import ChangePassword from '/src/ChangePassword.jsx';
 import Toast from '/src/Toast.jsx';
+import ChangeLog from '/src/ChangeLog.jsx';
 
 // --- Components ---
 
@@ -52,6 +53,7 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
         { id: 'config', label: 'Config', icon: 'fa-solid fa-sliders' }
       ]
     },
+    { id: 'changelog', label: 'Change Log', icon: 'fa-solid fa-code-branch' },
     { id: 'docs', label: 'Documentation', icon: 'fa-solid fa-book' },
     { id: 'support', label: 'Support', icon: 'fa-solid fa-headset' },
     { id: 'logs', label: 'System Logs', icon: 'fa-solid fa-file-code' }
@@ -421,6 +423,8 @@ function DashboardContent({ activeMenu, showToast }) {
   if (activeMenu === 'settings') return React.createElement('div', { className: 'modern-card p-4 animate-fade-in' }, 'Settings Page');
   
   if (activeMenu === 'config') return React.createElement(Config, { showToast });
+
+  if (activeMenu === 'changelog') return React.createElement(ChangeLog, { showToast });
   
   return null;
 }

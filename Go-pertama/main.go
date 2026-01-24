@@ -210,6 +210,7 @@ func main() {
 	userHandler := handlers.NewUserHandler(userService)
 	authHandler := handlers.NewAuthHandler(authService)
 	configHandler := handlers.NewConfigHandler(configService)
+	changeLogHandler := handlers.NewChangeLogHandler()
 
 	mux := http.NewServeMux()
 
@@ -234,6 +235,9 @@ func main() {
 	})))
 
 	mux.HandleFunc("/upload", middleware.EnableCORS(middleware.AuthMiddleware(userHandler.UploadProfilePicture)))
+
+	// Change Log Route
+	mux.HandleFunc("/api/changelog", middleware.EnableCORS(middleware.AuthMiddleware(changeLogHandler.GetChangeLog)))
 
 	// Config Routes
 	mux.HandleFunc("/api/configs", middleware.EnableCORS(middleware.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
