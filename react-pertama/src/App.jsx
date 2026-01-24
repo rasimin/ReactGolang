@@ -7,6 +7,7 @@ import Config from '/src/Config.jsx';
 import ChangePassword from '/src/ChangePassword.jsx';
 import Toast from '/src/Toast.jsx';
 import ChangeLog from '/src/ChangeLog.jsx';
+import Profile from '/src/Profile.jsx';
 
 // --- Components ---
 
@@ -336,7 +337,14 @@ function Header({ title, onLogout, isDarkMode, toggleTheme, toggleSidebar, setAc
             ]),
             React.createElement('ul', { key: 'menu', className: 'dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-2', 'aria-labelledby': 'navbarDropdown' }, React.Children.toArray([
               React.createElement('li', { key: 'header' }, React.createElement('h6', { className: 'dropdown-header' }, 'Account Settings')),
-              React.createElement('li', { key: 'profile' }, React.createElement('a', { className: 'dropdown-item rounded-2', href: '#' }, [
+              React.createElement('li', { key: 'profile' }, React.createElement('a', { 
+                className: 'dropdown-item rounded-2', 
+                href: '#',
+                onClick: (e) => {
+                  e.preventDefault();
+                  setActiveMenu('profile');
+                }
+              }, [
                 React.createElement('i', { key: 'icon', className: 'fa-regular fa-user me-2' }), 'My Profile'
               ])),
               React.createElement('li', { key: 'pw' }, React.createElement('a', { 
@@ -425,6 +433,8 @@ function DashboardContent({ activeMenu, showToast }) {
   if (activeMenu === 'config') return React.createElement(Config, { showToast });
 
   if (activeMenu === 'changelog') return React.createElement(ChangeLog, { showToast });
+
+  if (activeMenu === 'profile') return React.createElement(Profile, { showToast });
   
   return null;
 }

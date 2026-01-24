@@ -632,10 +632,12 @@ body.dark .btn-modern-light:hover {
 /* Utility Classes */
 .bg-modern-subtle {
   background-color: #f8fafc; /* Slate 50 */
+  border: 1px solid var(--border-color);
 }
 
 body.dark .bg-modern-subtle {
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.06);
 }
 
 .modern-card {

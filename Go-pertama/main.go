@@ -220,6 +220,7 @@ func main() {
 	mux.HandleFunc("/change-password", middleware.EnableCORS(middleware.AuthMiddleware(authHandler.ChangePassword)))
 
 	// User Routes
+	mux.HandleFunc("/api/profile", middleware.EnableCORS(middleware.AuthMiddleware(userHandler.GetProfile)))
 	mux.HandleFunc("/api/users", middleware.EnableCORS(middleware.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			userHandler.GetUsers(w, r)

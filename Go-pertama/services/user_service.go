@@ -21,6 +21,7 @@ type UserService interface {
 	Update(req models.UpdateUserRequest, updaterEmail string) error
 	Delete(id int, deleterEmail string) error
 	UploadProfilePicture(email string, file multipart.File, header *multipart.FileHeader) (string, error)
+	GetProfile(email string) (*models.User, error)
 }
 
 type userService struct {
@@ -29,6 +30,10 @@ type userService struct {
 
 func NewUserService(repo repository.UserRepository) UserService {
 	return &userService{repo: repo}
+}
+
+func (s *userService) GetProfile(email string) (*models.User, error) {
+	return s.repo.GetByEmail(email)
 }
 
 func (s *userService) GetAll(page, limit int, search string) (*models.UsersResponse, error) {
@@ -126,7 +131,7 @@ func (s *userService) UploadProfilePicture(email string, file multipart.File, he
 	if _, err := os.Stat(uploadDir); os.IsNotExist(err) {
 		os.Mkdir(uploadDir, 0755)
 	}
-	
+
 	uploadPath := filepath.Join(uploadDir, filename)
 
 	// Create destination file
@@ -146,6 +151,6 @@ func (s *userService) UploadProfilePicture(email string, file multipart.File, he
 	if err == nil {
 		s.repo.LogActivity(email, "UPLOAD_PICTURE", "Uploaded "+filename)
 	}
-	
+
 	return filename, err
 }
