@@ -121,6 +121,16 @@ body.dark .loading-overlay {
   background-color: rgba(17, 24, 39, 0.8);
 }
 
+/* Table Loading Overlay - Subtle */
+.table-loading-overlay {
+  background-color: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(1px);
+}
+
+body.dark .table-loading-overlay {
+  background-color: rgba(0, 0, 0, 0.3); /* Darker, semi-transparent black */
+}
+
 /* Animations */
 @keyframes fadeInUp {
   from {
@@ -187,6 +197,7 @@ body.dark .glass-card {
   background: rgba(255, 255, 255, 0.5);
   border: 1px solid rgba(0, 0, 0, 0.1);
   padding: 0.75rem 1rem;
+  border-radius: 0.75rem; /* Lebih rounded */
   transition: all 0.3s ease;
 }
 
@@ -210,6 +221,48 @@ body.dark .form-control-modern:focus {
   background: rgba(0, 0, 0, 0.4);
   border-color: #818cf8;
   color: white !important;
+}
+
+.form-select-modern {
+  background-color: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 0.75rem 1rem;
+  padding-right: 2.5rem; /* Space for icon */
+  border-radius: 0.75rem; /* Konsisten dengan form control */
+  transition: all 0.3s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 16px 12px;
+  cursor: pointer;
+}
+
+.form-select-modern:focus {
+  background-color: #ffffff;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+  outline: none;
+}
+
+body.dark .form-select-modern {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: white !important;
+  /* Lighter chevron for dark mode */
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+}
+
+body.dark .form-select-modern option {
+    background-color: #1e293b; /* Dark bg for options dropdown */
+    color: white;
+}
+
+body.dark .form-select-modern:focus {
+  background-color: rgba(0, 0, 0, 0.4);
+  border-color: #818cf8;
 }
 
 .btn-primary-modern {
@@ -630,7 +683,7 @@ body.dark .modern-card {
   color: var(--text-muted);
   font-weight: 600;
   padding: 0.75rem 1rem;
-  background-color: var(--bg-modern-subtle) !important;
+  background-color: #f1f5f9 !important; /* Slate 100 - Distinct from white */
 }
 
 .table-modern tbody tr {
@@ -678,10 +731,11 @@ body.dark .table-modern thead th {
   border: none;
   color: var(--text-muted);
   background: transparent;
-  margin: 0 2px;
+  margin: 0 1px;
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
+  font-size: 0.85rem;
   display: flex;
   align-items: center;
   justify-content: center;

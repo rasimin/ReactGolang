@@ -7,6 +7,7 @@ export default function Users() {
   const [users, setUsers] = useState([]);
   const [totalUsers, setTotalUsers] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -51,6 +52,7 @@ export default function Users() {
       const data = await response.json();
       setUsers(data.data || []);
       setTotalUsers(data.total || 0);
+      setIsFirstLoad(false);
     } catch (err) {
       console.error("Fetch users error:", err);
       setError(err.message);
@@ -149,8 +151,8 @@ export default function Users() {
     setShowModal(true);
   };
 
-  // Modern Loading State
-  if (loading) {
+  // Modern Loading State (Only on first load)
+  if (isFirstLoad && loading) {
     return React.createElement('div', { className: 'd-flex flex-column justify-content-center align-items-center', style: { minHeight: '60vh' } }, [
       React.createElement('div', { key: 'spinner', className: 'spinner-modern' }),
       React.createElement('div', { key: 'text', className: 'loading-text' }, 'LOADING DATA...')
@@ -176,7 +178,9 @@ export default function Users() {
         React.createElement('div', { key: 'actions', className: 'd-flex gap-3 align-items-center' }, [
             // Modern Search Input
             React.createElement('div', { className: 'search-container-modern' }, [
-                React.createElement('i', { key: 'icon', className: 'fa-solid fa-magnifying-glass text-muted small' }),
+                loading && !isFirstLoad 
+                    ? React.createElement('div', { key: 'spinner', className: 'spinner-border text-primary spinner-border-sm me-2', role: 'status' })
+                    : React.createElement('i', { key: 'icon', className: 'fa-solid fa-magnifying-glass text-muted small' }),
                 React.createElement('input', { 
                     key: 'input',
                     type: 'text', 
@@ -195,7 +199,12 @@ export default function Users() {
       ]),
       
       // Table
-      React.createElement('div', { key: 'table', className: 'table-responsive' }, 
+      React.createElement('div', { key: 'table', className: 'table-responsive position-relative' }, [
+        loading && !isFirstLoad && React.createElement('div', { 
+            key: 'overlay',
+            className: 'table-loading-overlay position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center',
+            style: { zIndex: 5 }
+        }),
         React.createElement('table', { className: 'table table-hover align-middle mb-0 table-modern' }, [
           React.createElement('thead', { key: 'thead' }, 
             React.createElement('tr', null, React.Children.toArray([
@@ -250,7 +259,7 @@ export default function Users() {
             )
           )
         ])
-      ),
+      ]),
 
       // Pagination Footer
       React.createElement('div', { key: 'pagination', className: 'd-flex justify-content-between align-items-center mt-4 border-top pt-3' }, [
@@ -261,15 +270,21 @@ export default function Users() {
           // Pagination Buttons
           React.createElement('nav', { key: 'nav' }, 
               React.createElement('ul', { className: 'pagination pagination-modern mb-0' }, [
+                  // First Page
+                  React.createElement('li', { key: 'first', className: `page-item ${currentPage === 1 ? 'disabled' : ''}` },
+                      React.createElement('button', { className: 'page-link', onClick: () => handlePageChange(1), title: 'First Page' }, 
+                          React.createElement('i', { className: 'fa-solid fa-angles-left' })
+                      )
+                  ),
                   // Previous
                   React.createElement('li', { key: 'prev', className: `page-item ${currentPage === 1 ? 'disabled' : ''}` },
-                      React.createElement('button', { className: 'page-link', onClick: () => handlePageChange(currentPage - 1) }, 
+                      React.createElement('button', { className: 'page-link', onClick: () => handlePageChange(currentPage - 1), title: 'Previous' }, 
                           React.createElement('i', { className: 'fa-solid fa-chevron-left' })
                       )
                   ),
                   // Page Numbers
                   ...(() => {
-                      const maxButtons = 10;
+                      const maxButtons = 7;
                       let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
                       let endPage = startPage + maxButtons - 1;
 
@@ -290,8 +305,14 @@ export default function Users() {
                   }),
                   // Next
                   React.createElement('li', { key: 'next', className: `page-item ${currentPage === totalPages ? 'disabled' : ''}` },
-                      React.createElement('button', { className: 'page-link', onClick: () => handlePageChange(currentPage + 1) }, 
+                      React.createElement('button', { className: 'page-link', onClick: () => handlePageChange(currentPage + 1), title: 'Next' }, 
                           React.createElement('i', { className: 'fa-solid fa-chevron-right' })
+                      )
+                  ),
+                  // Last Page
+                  React.createElement('li', { key: 'last', className: `page-item ${currentPage === totalPages ? 'disabled' : ''}` },
+                      React.createElement('button', { className: 'page-link', onClick: () => handlePageChange(totalPages), title: 'Last Page' }, 
+                          React.createElement('i', { className: 'fa-solid fa-angles-right' })
                       )
                   )
               ])
@@ -338,12 +359,12 @@ export default function Users() {
                           ]),
                   React.createElement('div', { key: 'row', className: 'row' }, [
                       React.createElement('div', { key: 'role-col', className: 'col-md-6 mb-3' }, [
-                                  React.createElement('label', { className: 'form-label small fw-bold text-muted' }, 'Role'),
-                          React.createElement('select', { className: 'form-select form-control-modern', value: currentUser.role, onChange: e => setCurrentUser({...currentUser, role: e.target.value}) }, [
-                              React.createElement('option', { key: 'opt-user', value: 'user' }, 'User'),
-                              React.createElement('option', { key: 'opt-admin', value: 'admin' }, 'Admin')
-                                  ])
-                              ]),
+                                    React.createElement('label', { className: 'form-label small fw-bold text-muted' }, 'Role'),
+                            React.createElement('select', { className: 'form-select-modern w-100', value: currentUser.role, onChange: e => setCurrentUser({...currentUser, role: e.target.value}) }, [
+                                React.createElement('option', { key: 'opt-user', value: 'user' }, 'User'),
+                                React.createElement('option', { key: 'opt-admin', value: 'admin' }, 'Admin')
+                                    ])
+                                ]),
                       React.createElement('div', { key: 'status-col', className: 'col-md-6 mb-3' }, [
                                   React.createElement('label', { className: 'form-label small fw-bold text-muted' }, 'Status'),
                           React.createElement('div', { key: 'switch', className: 'form-check form-switch mt-2' }, [
