@@ -444,7 +444,7 @@ function DashboardLayout({ onLogout, isDarkMode, toggleTheme, togglePasswordModa
 
   const toggleSidebar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
 
-  return React.createElement('div', { className: 'd-flex', style: { minHeight: '100vh' } }, [
+  return React.createElement('div', { className: 'd-flex', style: { height: '100vh', overflow: 'hidden' } }, [
     React.createElement(Sidebar, { 
       key: 'sidebar', 
       activeMenu: activeMenu, 
@@ -453,7 +453,8 @@ function DashboardLayout({ onLogout, isDarkMode, toggleTheme, togglePasswordModa
     }),
     React.createElement('div', { 
       key: 'wrapper', 
-      className: `flex-grow-1 layout-wrapper d-flex flex-column ${isSidebarCollapsed ? 'collapsed' : ''}` 
+      className: `flex-grow-1 layout-wrapper d-flex flex-column ${isSidebarCollapsed ? 'collapsed' : ''}`,
+      style: { overflow: 'hidden' }
     }, [
       React.createElement(Header, { 
         key: 'header', 
@@ -467,7 +468,7 @@ function DashboardLayout({ onLogout, isDarkMode, toggleTheme, togglePasswordModa
       }),
       React.createElement('main', { 
         key: 'main', 
-        className: 'flex-grow-1', // Removed padding to make content full width/height
+        className: 'flex-grow-1 overflow-auto custom-scrollbar', 
         style: { marginTop: '0' } 
       }, 
         React.createElement(DashboardContent, { activeMenu: activeMenu, showToast: showToast })
