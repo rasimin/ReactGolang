@@ -89,6 +89,7 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
           }, [
             // Main Menu Item
             React.createElement('a', {
+              key: 'link',
               href: '#',
               className: `nav-link-modern ${isActive ? 'active' : ''} ${isCollapsed ? 'justify-content-center' : ''} d-flex align-items-center justify-content-between`,
               onClick: (e) => { 
@@ -103,12 +104,13 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
               'data-bs-target': hasChildren ? undefined : '#sidebarMenu',
               title: isCollapsed ? item.label : ''
             }, [
-              React.createElement('div', { className: 'd-flex align-items-center' }, [
+              React.createElement('div', { key: 'label-container', className: 'd-flex align-items-center' }, [
                 React.createElement('i', { key: 'icon', className: `${item.icon} ${isCollapsed ? 'me-0' : 'me-3'}` }),
-                !isCollapsed && item.label
+                !isCollapsed && React.createElement('span', { key: 'text' }, item.label)
               ]),
               // Arrow for submenu
               hasChildren && !isCollapsed && React.createElement('i', { 
+                key: 'arrow',
                 className: `fa-solid fa-chevron-right small transition-transform ${isExpanded ? 'rotate-90' : ''}`,
                 style: { fontSize: '0.7rem', transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }
               })
@@ -116,6 +118,7 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
 
             // Submenu (Accordion Style - Not Collapsed)
             hasChildren && !isCollapsed && React.createElement('div', {
+              key: 'submenu',
               className: `submenu-wrapper ${isExpanded ? 'open' : ''}`,
               id: `submenu-${item.id}`
             }, 
@@ -140,11 +143,12 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
 
             // Flyout Submenu (Collapsed Style - Hover)
             hasChildren && isCollapsed && hoveredMenu?.id === item.id && React.createElement('div', {
+              key: 'flyout',
               className: 'flyout-menu animate-fade-in',
               style: { top: hoveredMenu.top }
             }, [
-              React.createElement('div', { className: 'flyout-header' }, item.label),
-              React.createElement('ul', { className: 'nav flex-column' }, 
+              React.createElement('div', { key: 'header', className: 'flyout-header' }, item.label),
+              React.createElement('ul', { key: 'list', className: 'nav flex-column' }, 
                 item.children.map(child => 
                   React.createElement('li', { key: child.id, className: 'nav-item' },
                     React.createElement('a', {
@@ -173,13 +177,13 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
             React.createElement('i', { className: 'fa-solid fa-circle-info text-primary' })
           )
         : React.createElement('div', { className: 'd-flex align-items-center p-3 rounded-3', style: { background: 'var(--bg-body)' } }, [
-            React.createElement('div', { className: 'flex-shrink-0 me-3' },
+            React.createElement('div', { key: 'icon', className: 'flex-shrink-0 me-3' },
               React.createElement('i', { className: 'fa-solid fa-circle-info text-primary' })
             ),
-            React.createElement('div', { className: 'flex-grow-1' },
-              React.createElement('h6', { className: 'mb-0 small fw-bold' }, 'Need Help?'),
-              React.createElement('small', { className: 'text-muted', style: { fontSize: '0.75rem' } }, 'Check our docs')
-            )
+            React.createElement('div', { key: 'text', className: 'flex-grow-1' }, [
+              React.createElement('h6', { key: 'title', className: 'mb-0 small fw-bold' }, 'Need Help?'),
+              React.createElement('small', { key: 'desc', className: 'text-muted', style: { fontSize: '0.75rem' } }, 'Check our docs')
+            ])
           ])
     )
   ]);
@@ -219,8 +223,8 @@ function Header({ title, onLogout, isDarkMode, toggleTheme, toggleSidebar, setAc
       }, React.createElement('i', { className: 'fa-solid fa-bars-staggered fs-4 text-primary' })),
 
       React.createElement('div', { key: 'title-wrapper' }, [
-        React.createElement('h5', { className: 'mb-0 fw-bold' }, title),
-        React.createElement('small', { className: 'text-muted' }, 'Overview of your project')
+        React.createElement('h5', { key: 'h5', className: 'mb-0 fw-bold' }, title),
+        React.createElement('small', { key: 'small', className: 'text-muted' }, 'Overview of your project')
       ]),
       
       React.createElement('button', {
@@ -232,7 +236,7 @@ function Header({ title, onLogout, isDarkMode, toggleTheme, toggleSidebar, setAc
       }, React.createElement('i', { className: 'fa-solid fa-ellipsis-vertical' })),
 
       React.createElement('div', { key: 'collapse', className: 'collapse navbar-collapse', id: 'navbarSupportedContent' }, [
-        React.createElement('ul', { className: 'navbar-nav ms-auto mb-2 mb-lg-0 align-items-center gap-3' }, [
+        React.createElement('ul', { className: 'navbar-nav ms-auto mb-2 mb-lg-0 align-items-center gap-3' }, React.Children.toArray([
           // Dark Mode
           React.createElement('li', { key: 'theme', className: 'nav-item' },
             React.createElement('button', { 
@@ -245,6 +249,7 @@ function Header({ title, onLogout, isDarkMode, toggleTheme, toggleSidebar, setAc
           // Notifications
           React.createElement('li', { key: 'notif', className: 'nav-item dropdown' }, [
             React.createElement('button', { 
+              key: 'btn',
               className: 'btn btn-modern-light rounded-circle shadow-sm position-relative',
               style: { width: '40px', height: '40px' },
               'data-bs-toggle': 'dropdown',
@@ -253,42 +258,51 @@ function Header({ title, onLogout, isDarkMode, toggleTheme, toggleSidebar, setAc
               React.createElement('i', { key: 'icon', className: 'fa-regular fa-bell' }),
               unreadCount > 0 && React.createElement('span', { key: 'badge', className: 'position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle' })
             ]),
-            React.createElement('ul', { className: 'dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-0 notification-dropdown' }, [
-              React.createElement('div', { key: 'header', className: 'd-flex justify-content-between align-items-center p-3 border-bottom' }, [
-                React.createElement('h6', { className: 'mb-0 fw-bold' }, 'Notifications'),
-                React.createElement('small', { className: 'text-primary cursor-pointer' }, 'Mark all read')
-              ]),
-              React.createElement('div', { key: 'list', className: 'list-group list-group-flush' },
-                notifications.map(n => 
-                  React.createElement('a', { 
-                    key: n.id, 
-                    href: '#', 
-                    className: `list-group-item list-group-item-action p-3 d-flex align-items-start notification-item ${n.unread ? 'unread' : ''}` 
-                  }, [
-                    React.createElement('div', { className: `rounded-circle p-2 bg-${n.color} bg-opacity-10 text-${n.color} me-3 flex-shrink-0` },
-                      React.createElement('i', { className: `fa-solid ${n.icon}` })
-                    ),
-                    React.createElement('div', { className: 'flex-grow-1' }, [
-                      React.createElement('div', { className: 'd-flex justify-content-between align-items-center mb-1' }, [
-                        React.createElement('h6', { className: 'mb-0 small fw-bold' }, n.title),
-                        React.createElement('small', { className: 'text-muted ms-2', style: { fontSize: '0.7rem' } }, n.time)
-                      ]),
-                      React.createElement('p', { className: 'mb-0 text-muted small text-truncate', style: { maxWidth: '180px' } }, 'Click to view details...')
+            React.createElement('ul', { key: 'menu', className: 'dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-0 notification-dropdown' }, React.Children.toArray([
+              React.createElement('li', { key: 'header', className: 'p-0' }, 
+                React.createElement('div', { className: 'd-flex justify-content-between align-items-center p-3 border-bottom' }, [
+                  React.createElement('h6', { key: 'title', className: 'mb-0 fw-bold' }, 'Notifications'),
+                  React.createElement('small', { key: 'action', className: 'text-primary cursor-pointer' }, 'Mark all read')
+                ])
+              ),
+              React.createElement('li', { key: 'list', className: 'p-0' }, 
+                React.createElement('div', { className: 'list-group list-group-flush' },
+                  notifications.map(n => 
+                    React.createElement('a', { 
+                      key: n.id, 
+                      href: '#', 
+                      className: `list-group-item list-group-item-action p-3 d-flex align-items-start notification-item ${n.unread ? 'unread' : ''}` 
+                    }, [
+                      React.createElement('div', { key: 'icon', className: `rounded-circle p-2 bg-${n.color} bg-opacity-10 text-${n.color} me-3 flex-shrink-0` },
+                        React.createElement('i', { className: `fa-solid ${n.icon}` })
+                      ),
+                      React.createElement('div', { key: 'content', className: 'flex-grow-1' }, [
+                        React.createElement('div', { key: 'header', className: 'd-flex justify-content-between align-items-center mb-1' }, [
+                          React.createElement('h6', { key: 'title', className: 'mb-0 small fw-bold' }, n.title),
+                          React.createElement('small', { key: 'time', className: 'text-muted ms-2', style: { fontSize: '0.7rem' } }, n.time)
+                        ]),
+                        React.createElement('p', { key: 'desc', className: 'mb-0 text-muted small text-truncate', style: { maxWidth: '180px' } }, 'Click to view details...')
+                      ])
                     ])
-                  ])
+                  )
                 )
               ),
-              React.createElement('div', { key: 'footer', className: 'p-2 text-center border-top' },
-                React.createElement('a', { href: '#', className: 'small text-decoration-none fw-bold text-primary' }, 'View All Notifications')
+              React.createElement('li', { key: 'footer', className: 'p-0' }, 
+                React.createElement('div', { className: 'p-2 text-center border-top' },
+                  React.createElement('a', { href: '#', className: 'small text-decoration-none fw-bold text-primary' }, 'View All Notifications')
+                )
               )
-            ])
+            ]))
           ]),
           
-          React.createElement('div', { key: 'sep', className: 'vr d-none d-lg-block mx-2' }),
+          React.createElement('li', { key: 'sep', className: 'nav-item d-none d-lg-block' }, 
+            React.createElement('div', { className: 'vr mx-2' })
+          ),
 
           // User Dropdown
           React.createElement('li', { key: 'user', className: 'nav-item dropdown' }, [
             React.createElement('a', {
+              key: 'link',
               className: 'nav-link dropdown-toggle d-flex align-items-center',
               href: '#',
               id: 'navbarDropdown',
@@ -297,8 +311,8 @@ function Header({ title, onLogout, isDarkMode, toggleTheme, toggleSidebar, setAc
               'aria-expanded': 'false'
             }, [
               React.createElement('div', { key: 'info', className: 'd-none d-md-block text-end me-2' }, [
-                React.createElement('div', { className: 'fw-bold small' }, 'Admin User'),
-                React.createElement('div', { className: 'text-muted small', style: { fontSize: '0.7rem' } }, 'Super Admin')
+                React.createElement('div', { key: 'name', className: 'fw-bold small' }, 'Admin User'),
+                React.createElement('div', { key: 'role', className: 'text-muted small', style: { fontSize: '0.7rem' } }, 'Super Admin')
               ]),
               React.createElement('img', {
                 key: 'img',
@@ -309,10 +323,10 @@ function Header({ title, onLogout, isDarkMode, toggleTheme, toggleSidebar, setAc
                 alt: 'User'
               })
             ]),
-            React.createElement('ul', { key: 'menu', className: 'dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-2', 'aria-labelledby': 'navbarDropdown' }, [
+            React.createElement('ul', { key: 'menu', className: 'dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-2', 'aria-labelledby': 'navbarDropdown' }, React.Children.toArray([
               React.createElement('li', { key: 'header' }, React.createElement('h6', { className: 'dropdown-header' }, 'Account Settings')),
               React.createElement('li', { key: 'profile' }, React.createElement('a', { className: 'dropdown-item rounded-2', href: '#' }, [
-                React.createElement('i', { className: 'fa-regular fa-user me-2' }), 'My Profile'
+                React.createElement('i', { key: 'icon', className: 'fa-regular fa-user me-2' }), 'My Profile'
               ])),
               React.createElement('li', { key: 'pw' }, React.createElement('a', { 
                 className: 'dropdown-item rounded-2', 
@@ -322,7 +336,7 @@ function Header({ title, onLogout, isDarkMode, toggleTheme, toggleSidebar, setAc
                   togglePasswordModal();
                 }
               }, [
-                React.createElement('i', { className: 'fa-solid fa-lock me-2' }), 'Security'
+                React.createElement('i', { key: 'icon', className: 'fa-solid fa-lock me-2' }), 'Security'
               ])),
               React.createElement('li', { key: 'div' }, React.createElement('hr', { className: 'dropdown-divider my-2' })),
               React.createElement('li', { key: 'logout' }, 
@@ -335,9 +349,9 @@ function Header({ title, onLogout, isDarkMode, toggleTheme, toggleSidebar, setAc
                   'Logout'
                 ])
               )
-            ])
+            ]))
           ])
-        ])
+        ]))
       ])
     ])
   );
@@ -360,10 +374,10 @@ function DashboardStats() {
       },
       React.createElement('div', { className: 'modern-card h-100 p-4' },
         React.createElement('div', { className: 'd-flex justify-content-between align-items-start mb-3' }, [
-          React.createElement('div', { className: `modern-icon-box bg-${card.color} bg-opacity-10 text-${card.color}` },
+          React.createElement('div', { key: 'icon', className: `modern-icon-box bg-${card.color} bg-opacity-10 text-${card.color}` },
              React.createElement('i', { className: `fa-solid ${card.icon}` })
           ),
-          React.createElement('span', { className: `badge bg-${card.color} bg-opacity-10 text-${card.color} rounded-pill` }, card.trend)
+          React.createElement('span', { key: 'badge', className: `badge bg-${card.color} bg-opacity-10 text-${card.color} rounded-pill` }, card.trend)
         ]),
         React.createElement('h2', { className: 'fw-bold mb-1' }, card.value),
           React.createElement('p', { className: 'text-muted small mb-0' }, card.title)
@@ -378,12 +392,12 @@ function DashboardContent({ activeMenu }) {
     return React.createElement('div', { className: 'p-4' }, [
       React.createElement(DashboardStats, { key: 'stats' }),
       React.createElement('div', { key: 'chart', className: 'modern-card p-4 animate-fade-in animate-delay-300' }, [
-        React.createElement('div', { className: 'd-flex justify-content-between align-items-center mb-4' }, [
-          React.createElement('h5', { className: 'fw-bold mb-0' }, 'Recent Activity'),
-          React.createElement('button', { className: 'btn btn-sm btn-modern-light rounded-pill px-3' }, 'View All')
+        React.createElement('div', { key: 'header', className: 'd-flex justify-content-between align-items-center mb-4' }, [
+          React.createElement('h5', { key: 'title', className: 'fw-bold mb-0' }, 'Recent Activity'),
+          React.createElement('button', { key: 'btn', className: 'btn btn-sm btn-modern-light rounded-pill px-3' }, 'View All')
         ]),
-        React.createElement('div', { className: 'p-5 text-center bg-modern-subtle rounded-3 border border-dashed' },
-          React.createElement('p', { className: 'text-muted mb-0' }, 'Chart Visualization Placeholder')
+        React.createElement('div', { key: 'placeholder', className: 'p-5 text-center bg-modern-subtle rounded-3 border border-dashed' },
+          React.createElement('p', { key: 'text', className: 'text-muted mb-0' }, 'Chart Visualization Placeholder')
         )
       ])
     ]);
@@ -504,19 +518,20 @@ function LoginPage({ onLogin, isDarkMode, toggleTheme }) {
             ]),
 
             React.createElement('div', { key: 'header', className: 'text-center mb-4' }, [
-              React.createElement('div', { className: 'd-inline-flex align-items-center justify-content-center bg-modern-subtle rounded-circle shadow-sm mb-3', style: { width: '64px', height: '64px' } },
+              React.createElement('div', { key: 'logo', className: 'd-inline-flex align-items-center justify-content-center bg-modern-subtle rounded-circle shadow-sm mb-3', style: { width: '64px', height: '64px' } },
                  React.createElement('i', { className: 'fa-brands fa-react fa-2x text-primary' })
               ),
-              React.createElement('h3', { className: 'fw-bold mb-1' }, 'Welcome Back'),
-              React.createElement('p', { className: 'text-muted' }, 'Enter your credentials to access the admin.')
+              React.createElement('h3', { key: 'title', className: 'fw-bold mb-1' }, 'Welcome Back'),
+              React.createElement('p', { key: 'subtitle', className: 'text-muted' }, 'Enter your credentials to access the admin.')
             ]),
             
             error && React.createElement('div', { key: 'error', className: 'alert alert-danger small py-2 mb-3' }, error),
 
             React.createElement('form', { key: 'form', onSubmit: handleSubmit }, [
               React.createElement('div', { key: 'u', className: 'mb-3' }, [
-                React.createElement('label', { className: 'form-label small fw-bold text-muted ms-1' }, 'EMAIL'),
+                React.createElement('label', { key: 'l', className: 'form-label small fw-bold text-muted ms-1' }, 'EMAIL'),
                 React.createElement('input', {
+                  key: 'i',
                   type: 'email', // Changed to email for better validation
                   className: 'form-control form-control-modern',
                   placeholder: 'name@example.com',
@@ -526,8 +541,9 @@ function LoginPage({ onLogin, isDarkMode, toggleTheme }) {
                 })
               ]),
               React.createElement('div', { key: 'p', className: 'mb-4' }, [
-                React.createElement('label', { className: 'form-label small fw-bold text-muted ms-1' }, 'PASSWORD'),
+                React.createElement('label', { key: 'l', className: 'form-label small fw-bold text-muted ms-1' }, 'PASSWORD'),
                 React.createElement('input', {
+                  key: 'i',
                   type: 'password',
                   className: 'form-control form-control-modern',
                   placeholder: '••••••••',
@@ -543,7 +559,7 @@ function LoginPage({ onLogin, isDarkMode, toggleTheme }) {
                 disabled: isLoading
               }, [
                 isLoading ? 'Signing In...' : 'Sign In ',
-                !isLoading && React.createElement('i', { className: 'fa-solid fa-arrow-right ms-2' })
+                !isLoading && React.createElement('i', { key: 'icon', className: 'fa-solid fa-arrow-right ms-2' })
               ])
             ]),
             React.createElement('div', { key: 'footer', className: 'text-center mt-4' },

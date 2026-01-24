@@ -672,3 +672,45 @@ body.dark .table-modern thead th {
   background-color: rgba(255, 255, 255, 0.05) !important;
   border-bottom-color: var(--border-color);
 }
+
+/* Pagination Modern */
+.pagination-modern .page-link {
+  border: none;
+  color: var(--text-muted);
+  background: transparent;
+  margin: 0 2px;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.pagination-modern .page-link:hover {
+  background-color: var(--hover-bg);
+  color: #6366f1; /* Primary color */
+}
+
+.pagination-modern .page-item.active .page-link {
+  background: var(--primary-gradient);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.pagination-modern .page-item.disabled .page-link {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+body.dark .pagination-modern .page-link {
+  color: var(--text-muted);
+}
+
+body.dark .pagination-modern .page-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}

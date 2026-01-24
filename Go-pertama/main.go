@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -46,6 +47,13 @@ type User struct {
 	LastLogin           *time.Time `json:"lastLogin"`
 	LastLogout          *time.Time `json:"lastLogout"`
 	FailedLoginAttempts int        `json:"failedLoginAttempts"`
+}
+
+type UsersResponse struct {
+	Data  []User `json:"data"`
+	Total int    `json:"total"`
+	Page  int    `json:"page"`
+	Limit int    `json:"limit"`
 }
 
 type CreateUserRequest struct {
@@ -494,7 +502,47 @@ func getUsersHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := db.Query("SELECT ID, Email, Name, Role, IsActive, ProfilePicture, LastLogin, LastLogout, FailedLoginAttempts FROM Users")
+	// Parse query params
+	pageStr := r.URL.Query().Get("page")
+	limitStr := r.URL.Query().Get("limit")
+	search := r.URL.Query().Get("search")
+
+	page, _ := strconv.Atoi(pageStr)
+	if page < 1 {
+		page = 1
+	}
+	limit, _ := strconv.Atoi(limitStr)
+	if limit < 1 {
+		limit = 5 // Default limit
+	}
+
+	offset := (page - 1) * limit
+
+	// Build query
+	whereClause := ""
+	params := []interface{}{}
+
+	if search != "" {
+		whereClause = "WHERE Name LIKE @p1 OR Email LIKE @p1"
+		params = append(params, "%"+search+"%")
+	}
+
+	// Get Total Count
+	var total int
+	countQuery := "SELECT COUNT(*) FROM Users " + whereClause
+	err := db.QueryRow(countQuery, params...).Scan(&total)
+	if err != nil {
+		http.Error(w, "Database error (count): "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Get Data
+	// SQL Server: OFFSET ... ROWS FETCH NEXT ... ROWS ONLY
+	// We append the pagination clause.
+	// Note: OFFSET/FETCH requires ORDER BY.
+	query := fmt.Sprintf("SELECT ID, Email, Name, Role, IsActive, ProfilePicture, LastLogin, LastLogout, FailedLoginAttempts FROM Users %s ORDER BY ID DESC OFFSET %d ROWS FETCH NEXT %d ROWS ONLY", whereClause, offset, limit)
+
+	rows, err := db.Query(query, params...)
 	if err != nil {
 		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -525,8 +573,20 @@ func getUsersHandler(w http.ResponseWriter, r *http.Request) {
 		users = append(users, u)
 	}
 
+	// If no users found, return empty array instead of null
+	if users == nil {
+		users = []User{}
+	}
+
+	resp := UsersResponse{
+		Data:  users,
+		Total: total,
+		Page:  page,
+		Limit: limit,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(users)
+	json.NewEncoder(w).Encode(resp)
 }
 
 func createUserHandler(w http.ResponseWriter, r *http.Request) {
