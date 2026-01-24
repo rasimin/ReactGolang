@@ -8,6 +8,7 @@ import ChangePassword from '/src/ChangePassword.jsx';
 import Toast from '/src/Toast.jsx';
 import ChangeLog from '/src/ChangeLog.jsx';
 import Profile from '/src/Profile.jsx';
+import Roles from '/src/Roles.jsx';
 
 // --- Components ---
 
@@ -25,27 +26,8 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'fa-solid fa-gauge' },
     { id: 'users', label: 'Users', icon: 'fa-solid fa-users' },
-    { 
-      id: 'reports', 
-      label: 'Reports', 
-      icon: 'fa-solid fa-chart-pie',
-      children: [
-        { id: 'sales', label: 'Sales Report', icon: 'fa-solid fa-sack-dollar' },
-        { id: 'traffic', label: 'Traffic Source', icon: 'fa-solid fa-globe' },
-        { id: 'performance', label: 'Performance', icon: 'fa-solid fa-bolt' }
-      ]
-    },
-    { 
-      id: 'products', 
-      label: 'Products', 
-      icon: 'fa-solid fa-box',
-      children: [
-        { id: 'list', label: 'Product List', icon: 'fa-solid fa-list' },
-        { id: 'categories', label: 'Categories', icon: 'fa-solid fa-tags' },
-        { id: 'inventory', label: 'Inventory', icon: 'fa-solid fa-warehouse' }
-      ]
-    },
-    { id: 'orders', label: 'Orders', icon: 'fa-solid fa-cart-shopping' },
+    { id: 'roles', label: 'Roles Access', icon: 'fa-solid fa-shield-halved' },
+
     { 
       id: 'settings', 
       label: 'Settings', 
@@ -146,7 +128,10 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
                           setActiveMenu(child.id);
                         },
                         style: { background: 'transparent', boxShadow: 'none' }
-                      }, child.label)
+                      }, [
+                        child.icon && React.createElement('i', { key: 'icon', className: `${child.icon} me-2` }),
+                        child.label
+                      ])
                     )
                   )
                 )
@@ -172,7 +157,10 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
                         setHoveredMenu(null); // Close flyout on selection
                       },
                       style: { background: 'transparent', boxShadow: 'none' }
-                    }, child.label)
+                    }, [
+                      child.icon && React.createElement('i', { key: 'icon', className: `${child.icon} me-2` }),
+                      child.label
+                    ])
                   )
                 )
               )
@@ -425,6 +413,10 @@ function DashboardContent({ activeMenu, showToast }) {
   // Users and Settings components remain similar but wrapped in modern-card...
   if (activeMenu === 'users') {
     return React.createElement(Users, { showToast });
+  }
+
+  if (activeMenu === 'roles') {
+    return React.createElement(Roles, { showToast });
   }
   
   // Minimal placeholder for settings to keep it working

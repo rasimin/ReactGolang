@@ -21,7 +21,9 @@ type User struct {
 	ID                  int        `json:"id"`
 	Email               string     `json:"email"`
 	Name                string     `json:"name"`
-	Role                string     `json:"role"`
+	Role                string     `json:"role"` // This will now come from joined table
+	RoleID              int        `json:"roleId"`
+	RoleDetails         *Role      `json:"roleDetails,omitempty"`
 	IsActive            bool       `json:"isActive"`
 	ProfilePicture      string     `json:"profilePicture"`
 	LastLogin           *time.Time `json:"lastLogin"`
@@ -42,6 +44,7 @@ type CreateUserRequest struct {
 	Password string `json:"password"`
 	Name     string `json:"name"`
 	Role     string `json:"role"`
+	RoleID   int    `json:"roleId"`
 	IsActive bool   `json:"isActive"`
 }
 
@@ -50,6 +53,7 @@ type UpdateUserRequest struct {
 	Email    string `json:"email"`
 	Name     string `json:"name"`
 	Role     string `json:"role"`
+	RoleID   int    `json:"roleId"`
 	IsActive bool   `json:"isActive"`
 	Password string `json:"password,omitempty"` // Optional for update
 }

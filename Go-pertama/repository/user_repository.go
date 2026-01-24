@@ -13,7 +13,7 @@ type UserRepository interface {
 	Create(user *models.User) error
 	Update(user *models.User) error
 	Delete(id int) error
-	GetAll(page, limit int, search string) ([]models.User, int, error)
+	GetAll(page, limit int, search string, roleID int) ([]models.User, int, error)
 	UpdatePassword(id int, hashedPassword string) error
 	UpdatePasswordByEmail(email string, hashedPassword string) error
 	UpdateLastLogin(id int) error
@@ -36,15 +36,22 @@ func (r *userRepository) GetByEmail(email string) (*models.User, error) {
 	var u models.User
 	var pp sql.NullString
 	var lastLogin, lastLogout sql.NullTime
+	var roleID sql.NullInt64
 
-	query := "SELECT ID, Email, Password, Name, Role, IsActive, ProfilePicture, LastLogin, LastLogout, FailedLoginAttempts FROM Users WHERE Email = @p1"
+	query := `SELECT u.ID, u.Email, u.Password, u.Name, COALESCE(r.Name, u.Role), u.RoleID, u.IsActive, u.ProfilePicture, u.LastLogin, u.LastLogout, u.FailedLoginAttempts 
+			  FROM Users u 
+			  LEFT JOIN Roles r ON u.RoleID = r.ID 
+			  WHERE u.Email = @p1`
 	err := r.db.QueryRow(query, email).Scan(
-		&u.ID, &u.Email, &u.Password, &u.Name, &u.Role, &u.IsActive, &pp, &lastLogin, &lastLogout, &u.FailedLoginAttempts,
+		&u.ID, &u.Email, &u.Password, &u.Name, &u.Role, &roleID, &u.IsActive, &pp, &lastLogin, &lastLogout, &u.FailedLoginAttempts,
 	)
 	if err != nil {
 		return nil, err
 	}
 
+	if roleID.Valid {
+		u.RoleID = int(roleID.Int64)
+	}
 	if pp.Valid {
 		u.ProfilePicture = pp.String
 	}
@@ -62,15 +69,22 @@ func (r *userRepository) GetByID(id int) (*models.User, error) {
 	var u models.User
 	var pp sql.NullString
 	var lastLogin, lastLogout sql.NullTime
+	var roleID sql.NullInt64
 
-	query := "SELECT ID, Email, Password, Name, Role, IsActive, ProfilePicture, LastLogin, LastLogout, FailedLoginAttempts FROM Users WHERE ID = @p1"
+	query := `SELECT u.ID, u.Email, u.Password, u.Name, COALESCE(r.Name, u.Role), u.RoleID, u.IsActive, u.ProfilePicture, u.LastLogin, u.LastLogout, u.FailedLoginAttempts 
+			  FROM Users u 
+			  LEFT JOIN Roles r ON u.RoleID = r.ID 
+			  WHERE u.ID = @p1`
 	err := r.db.QueryRow(query, id).Scan(
-		&u.ID, &u.Email, &u.Password, &u.Name, &u.Role, &u.IsActive, &pp, &lastLogin, &lastLogout, &u.FailedLoginAttempts,
+		&u.ID, &u.Email, &u.Password, &u.Name, &u.Role, &roleID, &u.IsActive, &pp, &lastLogin, &lastLogout, &u.FailedLoginAttempts,
 	)
 	if err != nil {
 		return nil, err
 	}
 
+	if roleID.Valid {
+		u.RoleID = int(roleID.Int64)
+	}
 	if pp.Valid {
 		u.ProfilePicture = pp.String
 	}
@@ -85,15 +99,23 @@ func (r *userRepository) GetByID(id int) (*models.User, error) {
 }
 
 func (r *userRepository) Create(user *models.User) error {
-	query := `INSERT INTO Users (Email, Password, Name, Role, IsActive, CreatedAt) 
-		VALUES (@p1, @p2, @p3, @p4, @p5, GETDATE())`
-	_, err := r.db.Exec(query, user.Email, user.Password, user.Name, user.Role, user.IsActive)
+	query := `INSERT INTO Users (Email, Password, Name, Role, RoleID, IsActive, CreatedAt) 
+		VALUES (@p1, @p2, @p3, @p4, @p5, @p6, GETDATE())`
+	var roleID interface{} = user.RoleID
+	if user.RoleID == 0 {
+		roleID = nil
+	}
+	_, err := r.db.Exec(query, user.Email, user.Password, user.Name, user.Role, roleID, user.IsActive)
 	return err
 }
 
 func (r *userRepository) Update(user *models.User) error {
-	query := `UPDATE Users SET Name=@p1, Role=@p2, IsActive=@p3, Email=@p4, UpdatedAt=GETDATE() WHERE ID=@p5`
-	_, err := r.db.Exec(query, user.Name, user.Role, user.IsActive, user.Email, user.ID)
+	query := `UPDATE Users SET Name=@p1, Role=@p2, RoleID=@p3, IsActive=@p4, Email=@p5, UpdatedAt=GETDATE() WHERE ID=@p6`
+	var roleID interface{} = user.RoleID
+	if user.RoleID == 0 {
+		roleID = nil
+	}
+	_, err := r.db.Exec(query, user.Name, user.Role, roleID, user.IsActive, user.Email, user.ID)
 	return err
 }
 
@@ -102,27 +124,42 @@ func (r *userRepository) Delete(id int) error {
 	return err
 }
 
-func (r *userRepository) GetAll(page, limit int, search string) ([]models.User, int, error) {
+func (r *userRepository) GetAll(page, limit int, search string, roleID int) ([]models.User, int, error) {
 	offset := (page - 1) * limit
-	whereClause := ""
+	whereClause := "WHERE 1=1"
 	params := []interface{}{}
 
 	if search != "" {
-		whereClause = "WHERE Name LIKE @p1 OR Email LIKE @p1"
+		whereClause += " AND (u.Name LIKE @p1 OR u.Email LIKE @p1)"
 		params = append(params, "%"+search+"%")
+	}
+
+	if roleID > 0 {
+		// If search was present, it used @p1, so this needs to be @p2 or dynamic
+		// Better to use ? for standard sql or keep using named params logic manually?
+		// sqlserver driver uses @p1, @p2... but standard sql package with some drivers uses ?
+		// The existing code uses @p1. Let's handle parameter numbering carefully.
+
+		// Re-implement parameter handling to be robust
+		paramIdx := len(params) + 1
+		whereClause += fmt.Sprintf(" AND u.RoleID = @p%d", paramIdx)
+		params = append(params, roleID)
 	}
 
 	// Get Total Count
 	var total int
-	countQuery := "SELECT COUNT(*) FROM Users " + whereClause
+	countQuery := "SELECT COUNT(*) FROM Users u " + whereClause
 	err := r.db.QueryRow(countQuery, params...).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	// Get Data
-	query := fmt.Sprintf("SELECT ID, Email, Name, Role, IsActive, ProfilePicture, LastLogin, LastLogout, FailedLoginAttempts FROM Users %s ORDER BY ID DESC OFFSET %d ROWS FETCH NEXT %d ROWS ONLY", whereClause, offset, limit)
-	
+	query := fmt.Sprintf(`SELECT u.ID, u.Email, u.Name, r.Name, u.RoleID, u.IsActive, u.ProfilePicture, u.LastLogin, u.LastLogout, u.FailedLoginAttempts 
+						  FROM Users u 
+						  LEFT JOIN Roles r ON u.RoleID = r.ID 
+						  %s ORDER BY u.ID DESC OFFSET %d ROWS FETCH NEXT %d ROWS ONLY`, whereClause, offset, limit)
+
 	rows, err := r.db.Query(query, params...)
 	if err != nil {
 		return nil, 0, err
@@ -134,9 +171,13 @@ func (r *userRepository) GetAll(page, limit int, search string) ([]models.User, 
 		var u models.User
 		var pp sql.NullString
 		var lastLogin, lastLogout sql.NullTime
+		var roleID sql.NullInt64
 
-		if err := rows.Scan(&u.ID, &u.Email, &u.Name, &u.Role, &u.IsActive, &pp, &lastLogin, &lastLogout, &u.FailedLoginAttempts); err != nil {
+		if err := rows.Scan(&u.ID, &u.Email, &u.Name, &u.Role, &roleID, &u.IsActive, &pp, &lastLogin, &lastLogout, &u.FailedLoginAttempts); err != nil {
 			continue
+		}
+		if roleID.Valid {
+			u.RoleID = int(roleID.Int64)
 		}
 		if pp.Valid {
 			u.ProfilePicture = pp.String
@@ -149,7 +190,7 @@ func (r *userRepository) GetAll(page, limit int, search string) ([]models.User, 
 		}
 		users = append(users, u)
 	}
-	
+
 	if users == nil {
 		users = []models.User{}
 	}

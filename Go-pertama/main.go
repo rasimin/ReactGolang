@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"go-pertama/config"
 	"go-pertama/handlers"
@@ -43,6 +44,8 @@ func migrateDB() {
 		 ALTER TABLE Users ADD Name NVARCHAR(100) DEFAULT 'User' WITH VALUES;`,
 		`IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'Role' AND Object_ID = Object_ID(N'Users'))
 		 ALTER TABLE Users ADD Role VARCHAR(50) DEFAULT 'user' WITH VALUES;`,
+		`IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'RoleID' AND Object_ID = Object_ID(N'Users'))
+		 ALTER TABLE Users ADD RoleID BIGINT NULL;`,
 	}
 
 	for _, q := range queries {
@@ -137,6 +140,23 @@ func initDB() {
 	}
 }
 
+func seedRoles(db *gorm.DB) {
+	var count int64
+	db.Model(&models.Role{}).Count(&count)
+	if count == 0 {
+		log.Println("Seeding roles...")
+		roles := []models.Role{
+			{Name: "admin", Description: "Administrator", CreatedBy: "System", CreatedAt: time.Now(), UpdatedAt: time.Now(), UpdatedBy: "System"},
+			{Name: "user", Description: "Standard User", CreatedBy: "System", CreatedAt: time.Now(), UpdatedAt: time.Now(), UpdatedBy: "System"},
+		}
+		if err := db.Create(&roles).Error; err != nil {
+			log.Printf("Failed to seed roles: %v", err)
+		} else {
+			log.Println("Roles seeded successfully.")
+		}
+	}
+}
+
 func initGorm() {
 	dsn := fmt.Sprintf("server=%s;user id=%s;password=%s;database=%s",
 		appConfig.Database.Host,
@@ -155,14 +175,18 @@ func initGorm() {
 		return
 	}
 
-	// Auto Migrate SystemConfig
+	// Auto Migrate SystemConfig and Role
 	// Note: User migration is handled by manual SQL in migrateDB for now to preserve existing logic
-	err = gormDB.AutoMigrate(&models.SystemConfig{}, &models.SystemConfigHistory{})
+	err = gormDB.AutoMigrate(&models.SystemConfig{}, &models.SystemConfigHistory{}, &models.Role{})
 	if err != nil {
 		log.Printf("Warning: AutoMigrate failed: %v", err)
 	}
 
+	seedRoles(gormDB)
 	seedConfigDB(gormDB)
+
+	// Sync User Roles (Update RoleID based on Role string)
+	gormDB.Exec("UPDATE Users SET RoleID = (SELECT id FROM roles WHERE roles.name = Users.Role) WHERE RoleID IS NULL OR RoleID = 0")
 }
 
 // seedConfigDB seeds the system_configs table with default values if empty
@@ -200,17 +224,20 @@ func main() {
 	// Initialize Repositories
 	userRepo := repository.NewUserRepository(db)
 	configRepo := repository.NewConfigRepository(gormDB)
+	roleRepo := repository.NewRoleRepository(gormDB)
 
 	// Initialize Services
 	userService := services.NewUserService(userRepo)
 	authService := services.NewAuthService(userRepo, appConfig)
 	configService := services.NewConfigService(configRepo)
+	roleService := services.NewRoleService(roleRepo)
 
 	// Initialize Handlers
 	userHandler := handlers.NewUserHandler(userService)
 	authHandler := handlers.NewAuthHandler(authService)
 	configHandler := handlers.NewConfigHandler(configService)
 	changeLogHandler := handlers.NewChangeLogHandler()
+	roleHandler := handlers.NewRoleHandler(roleService)
 
 	mux := http.NewServeMux()
 
@@ -239,6 +266,35 @@ func main() {
 
 	// Change Log Route
 	mux.HandleFunc("/api/changelog", middleware.EnableCORS(middleware.AuthMiddleware(changeLogHandler.GetChangeLog)))
+
+	// Role Routes
+	mux.HandleFunc("/api/roles", middleware.EnableCORS(middleware.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			roleHandler.GetRoles(w, r)
+		} else if r.Method == http.MethodPost {
+			roleHandler.CreateRole(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
+
+	mux.HandleFunc("/api/roles/", middleware.EnableCORS(middleware.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		// Handle /api/roles/{id}
+		if len(path) > len("/api/roles/") {
+			if r.Method == http.MethodGet {
+				roleHandler.GetRole(w, r)
+				return
+			} else if r.Method == http.MethodPut {
+				roleHandler.UpdateRole(w, r)
+				return
+			} else if r.Method == http.MethodDelete {
+				roleHandler.DeleteRole(w, r)
+				return
+			}
+		}
+		http.NotFound(w, r)
+	})))
 
 	// Config Routes
 	mux.HandleFunc("/api/configs", middleware.EnableCORS(middleware.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {

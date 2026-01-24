@@ -16,7 +16,7 @@ import (
 )
 
 type UserService interface {
-	GetAll(page, limit int, search string) (*models.UsersResponse, error)
+	GetAll(page, limit int, search string, roleID int) (*models.UsersResponse, error)
 	Create(req models.CreateUserRequest, creatorEmail string) error
 	Update(req models.UpdateUserRequest, updaterEmail string) error
 	Delete(id int, deleterEmail string) error
@@ -36,7 +36,7 @@ func (s *userService) GetProfile(email string) (*models.User, error) {
 	return s.repo.GetByEmail(email)
 }
 
-func (s *userService) GetAll(page, limit int, search string) (*models.UsersResponse, error) {
+func (s *userService) GetAll(page, limit int, search string, roleID int) (*models.UsersResponse, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -44,7 +44,7 @@ func (s *userService) GetAll(page, limit int, search string) (*models.UsersRespo
 		limit = 5
 	}
 
-	users, total, err := s.repo.GetAll(page, limit, search)
+	users, total, err := s.repo.GetAll(page, limit, search, roleID)
 	if err != nil {
 		return nil, err
 	}
@@ -73,6 +73,7 @@ func (s *userService) Create(req models.CreateUserRequest, creatorEmail string) 
 		Password: string(hashedPassword),
 		Name:     req.Name,
 		Role:     req.Role,
+		RoleID:   req.RoleID,
 		IsActive: req.IsActive,
 	}
 
@@ -89,6 +90,7 @@ func (s *userService) Update(req models.UpdateUserRequest, updaterEmail string) 
 		Email:    req.Email,
 		Name:     req.Name,
 		Role:     req.Role,
+		RoleID:   req.RoleID,
 		IsActive: req.IsActive,
 	}
 

@@ -25,11 +25,13 @@ func (h *UserHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
 	pageStr := r.URL.Query().Get("page")
 	limitStr := r.URL.Query().Get("limit")
 	search := r.URL.Query().Get("search")
+	roleIDStr := r.URL.Query().Get("roleId")
 
 	page, _ := strconv.Atoi(pageStr)
 	limit, _ := strconv.Atoi(limitStr)
+	roleID, _ := strconv.Atoi(roleIDStr)
 
-	resp, err := h.userService.GetAll(page, limit, search)
+	resp, err := h.userService.GetAll(page, limit, search, roleID)
 	if err != nil {
 		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
 		return

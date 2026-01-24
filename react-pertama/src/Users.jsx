@@ -5,6 +5,7 @@ const { useState, useEffect } = React;
 
 export default function Users({ showToast }) {
   const [users, setUsers] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [totalUsers, setTotalUsers] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
@@ -21,9 +22,25 @@ export default function Users({ showToast }) {
     name: '',
     email: '',
     role: 'user',
+    roleId: 0,
     isActive: true,
     password: ''
   });
+
+  const fetchRoles = async () => {
+    try {
+      const response = await fetch(`${config.api.baseUrl}/api/roles`, {
+        headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        // Handle both array (legacy) and paginated response object
+        setRoles(Array.isArray(data) ? data : (data.data || []));
+      }
+    } catch (err) {
+      console.error("Failed to fetch roles:", err);
+    }
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -60,6 +77,10 @@ export default function Users({ showToast }) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchRoles();
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -156,6 +177,7 @@ export default function Users({ showToast }) {
     setModalMode('edit');
     setCurrentUser({ ...user, password: '' });
     setShowModal(true);
+    fetchRoles();
   };
 
   // Modern Loading State (Only on first load)
@@ -343,11 +365,11 @@ export default function Users({ showToast }) {
             key: 'modal', 
             className: 'modal fade show d-block', 
             tabIndex: '-1',
-            style: { zIndex: 1055, display: 'block' },
+            style: { zIndex: 1055, display: 'block', overflowX: 'hidden', overflowY: 'auto' },
             role: 'dialog'
         }, 
           React.createElement('div', { className: 'modal-dialog modal-dialog-centered' }, 
-              React.createElement('div', { className: 'modal-content border-0 shadow-lg animate-fade-in overflow-hidden', style: { borderRadius: '20px' } }, [
+              React.createElement('div', { className: 'modal-content border-0 shadow-lg animate-fade-in', style: { borderRadius: '20px' } }, [
                   // Modal Header
                   React.createElement('div', { key: 'header', className: 'modal-header border-bottom-0 bg-modern-subtle' }, [
                       React.createElement('h5', { key: 'title', className: 'modal-title fw-bold' }, modalMode === 'add' ? 'Add New User' : 'Edit User'),
@@ -367,10 +389,24 @@ export default function Users({ showToast }) {
                   React.createElement('div', { key: 'row', className: 'row' }, [
                       React.createElement('div', { key: 'role-col', className: 'col-md-6 mb-3' }, [
                                     React.createElement('label', { className: 'form-label small fw-bold text-muted' }, 'Role'),
-                            React.createElement('select', { className: 'form-select-modern w-100', value: currentUser.role, onChange: e => setCurrentUser({...currentUser, role: e.target.value}) }, [
-                                React.createElement('option', { key: 'opt-user', value: 'user' }, 'User'),
-                                React.createElement('option', { key: 'opt-admin', value: 'admin' }, 'Admin')
-                                    ])
+                            React.createElement('select', { 
+                                className: 'form-select-modern w-100', 
+                                value: currentUser.roleId || '', 
+                                onChange: e => {
+                                    const selectedId = parseInt(e.target.value);
+                                    const selectedRole = roles.find(r => r.id === selectedId);
+                                    setCurrentUser({
+                                        ...currentUser, 
+                                        roleId: selectedId,
+                                        role: selectedRole ? selectedRole.name : '' 
+                                    });
+                                }
+                            }, [
+                                React.createElement('option', { key: 'default', value: '' }, 'Select Role'),
+                                ...roles.map(role => 
+                                    React.createElement('option', { key: role.id, value: role.id }, role.name)
+                                )
+                            ])
                                 ]),
                       React.createElement('div', { key: 'status-col', className: 'col-md-6 mb-3' }, [
                                   React.createElement('label', { className: 'form-label small fw-bold text-muted' }, 'Status'),
@@ -411,7 +447,7 @@ export default function Users({ showToast }) {
             key: 'delete-modal', 
             className: 'modal fade show d-block', 
             tabIndex: '-1',
-            style: { zIndex: 1060, display: 'block' },
+            style: { zIndex: 1060, display: 'block', overflowX: 'hidden', overflowY: 'auto' },
             role: 'dialog'
         }, 
           React.createElement('div', { className: 'modal-dialog modal-dialog-centered modal-sm' }, 
