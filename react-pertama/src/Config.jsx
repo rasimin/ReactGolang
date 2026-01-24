@@ -32,6 +32,10 @@ export default function Config() {
   const [historyData, setHistoryData] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
+  // Delete Modal State
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [configToDelete, setConfigToDelete] = useState(null);
+
   const fetchConfigs = async () => {
     setLoading(true);
     try {
@@ -99,11 +103,16 @@ export default function Config() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this config?')) return;
+  const handleDelete = (configItem) => {
+    setConfigToDelete(configItem);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!configToDelete) return;
     
     try {
-      const response = await fetch(`${config.api.baseUrl}/api/configs/${id}`, {
+      const response = await fetch(`${config.api.baseUrl}/api/configs/${configToDelete.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
@@ -111,6 +120,9 @@ export default function Config() {
       });
       
       if (!response.ok) throw new Error('Failed to delete config');
+      
+      setShowDeleteModal(false);
+      setConfigToDelete(null);
       fetchConfigs();
     } catch (err) {
       alert(String(err.message));
@@ -322,7 +334,7 @@ export default function Config() {
                               React.createElement('button', {
                                   key: 'delete',
                                   className: 'btn btn-sm btn-link text-danger',
-                                  onClick: () => handleDelete(cfg.id),
+                                  onClick: () => handleDelete(cfg),
                                   title: 'Delete'
                               }, React.createElement('i', { className: 'fa-solid fa-trash' }))
                           ])
@@ -509,6 +521,35 @@ export default function Config() {
           ),
           document.body,
           'history-modal'
+      ),
+
+      // Delete Confirmation Modal
+      showDeleteModal && ReactDOM.createPortal(
+        React.createElement('div', { 
+            key: 'delete-modal', 
+            className: 'modal fade show d-block', 
+            tabIndex: '-1',
+            style: { zIndex: 1060, display: 'block', backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' },
+            role: 'dialog'
+        }, 
+          React.createElement('div', { className: 'modal-dialog modal-dialog-centered modal-sm' }, 
+              React.createElement('div', { className: 'modal-content border-0 shadow-lg animate-fade-in text-center p-4', style: { borderRadius: '24px' } }, [
+                  React.createElement('div', { key: 'icon-wrap', className: 'mb-3' }, 
+                    React.createElement('div', { key: 'icon-bg', className: 'rounded-circle bg-danger bg-opacity-10 d-inline-flex align-items-center justify-content-center', style: { width: '64px', height: '64px' } },
+                        React.createElement('i', { className: 'fa-solid fa-triangle-exclamation text-danger fs-3' })
+                    )
+                  ),
+                  React.createElement('h5', { key: 'title', className: 'fw-bold mb-2' }, 'Delete Config?'),
+                  React.createElement('p', { key: 'text', className: 'text-muted small mb-4' }, `Are you sure you want to delete "${configToDelete?.configKey}"? This action cannot be undone.`),
+                  React.createElement('div', { key: 'buttons', className: 'd-flex gap-2 justify-content-center' }, [
+                      React.createElement('button', { key: 'cancel', type: 'button', className: 'btn btn-light rounded-pill px-4 w-50', onClick: () => setShowDeleteModal(false) }, 'Cancel'),
+                      React.createElement('button', { key: 'confirm', type: 'button', className: 'btn btn-danger rounded-pill px-4 w-50', onClick: confirmDelete }, 'Delete')
+                  ])
+              ])
+          )
+        ),
+        document.body,
+        'delete-modal'
       )
   ]);
 }

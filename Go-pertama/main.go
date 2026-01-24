@@ -2,19 +2,15 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
-	"strconv"
 	"strings"
-	"time"
 
 	"go-pertama/config"
 	"go-pertama/handlers"
+	"go-pertama/middleware"
 	"go-pertama/models"
 	"go-pertama/repository"
 	"go-pertama/services"
@@ -31,59 +27,6 @@ var appConfig *config.Config
 // Global database connection pool
 var db *sql.DB
 var gormDB *gorm.DB
-
-type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type LoginResponse struct {
-	Message string `json:"message"`
-	Token   string `json:"token,omitempty"`
-	Success bool   `json:"success"`
-	User    *User  `json:"user,omitempty"`
-}
-
-type User struct {
-	ID                  int        `json:"id"`
-	Email               string     `json:"email"`
-	Name                string     `json:"name"`
-	Role                string     `json:"role"`
-	IsActive            bool       `json:"isActive"`
-	ProfilePicture      string     `json:"profilePicture"`
-	LastLogin           *time.Time `json:"lastLogin"`
-	LastLogout          *time.Time `json:"lastLogout"`
-	FailedLoginAttempts int        `json:"failedLoginAttempts"`
-}
-
-type UsersResponse struct {
-	Data  []User `json:"data"`
-	Total int    `json:"total"`
-	Page  int    `json:"page"`
-	Limit int    `json:"limit"`
-}
-
-type CreateUserRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Name     string `json:"name"`
-	Role     string `json:"role"`
-	IsActive bool   `json:"isActive"`
-}
-
-type UpdateUserRequest struct {
-	ID       int    `json:"id"`
-	Email    string `json:"email"`
-	Name     string `json:"name"`
-	Role     string `json:"role"`
-	IsActive bool   `json:"isActive"`
-	Password string `json:"password,omitempty"` // Optional for update
-}
-
-type ChangePasswordRequest struct {
-	OldPassword string `json:"oldPassword"`
-	NewPassword string `json:"newPassword"`
-}
 
 func migrateDB() {
 	// Add new columns if they don't exist
@@ -194,514 +137,6 @@ func initDB() {
 	}
 }
 
-func enableCORS(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept, Origin, X-Requested-With, Cache-Control")
-
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		next(w, r)
-	}
-}
-
-// Simple Auth Middleware
-func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		// Dummy token validation: sql-jwt-token-EMAIL-secret-...
-		if !strings.HasPrefix(tokenString, "sql-jwt-token-") {
-			http.Error(w, "Invalid token", http.StatusUnauthorized)
-			return
-		}
-
-		parts := strings.Split(tokenString, "-")
-		if len(parts) < 5 {
-			http.Error(w, "Invalid token format", http.StatusUnauthorized)
-			return
-		}
-
-		email := parts[3] // Extract email from dummy token
-
-		// Context could be used here to pass user info, but for now we rely on headers
-		r.Header.Set("X-User-Email", email)
-
-		next(w, r)
-	}
-}
-
-func logActivity(email, action, details string) {
-	var userID int
-	err := db.QueryRow("SELECT ID FROM Users WHERE Email = @p1", email).Scan(&userID)
-	if err != nil {
-		log.Printf("Failed to get UserID for log: %v", err)
-		return
-	}
-
-	_, err = db.Exec("INSERT INTO ActivityLogs (UserID, Action, Details, CreatedAt) VALUES (@p1, @p2, @p3, GETDATE())",
-		userID, action, details)
-	if err != nil {
-		log.Printf("Failed to insert activity log: %v", err)
-	}
-}
-
-func loginHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var creds LoginRequest
-	err := json.NewDecoder(r.Body).Decode(&creds)
-	if err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-
-	// Query database for user
-	var storedPassword string
-	var id int
-	var profilePicture sql.NullString
-	var isActive bool
-	var failedAttempts int
-
-	query := "SELECT ID, Password, ProfilePicture, IsActive, FailedLoginAttempts FROM Users WHERE Email = @p1"
-
-	err = db.QueryRow(query, creds.Email).Scan(&id, &storedPassword, &profilePicture, &isActive, &failedAttempts)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode(LoginResponse{
-				Message: "Invalid credentials (User not found)",
-				Success: false,
-			})
-			return
-		}
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(LoginResponse{
-			Message: "Database error: " + err.Error(),
-			Success: false,
-		})
-		return
-	}
-
-	if !isActive {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(LoginResponse{
-			Message: "Account is inactive. Please contact support.",
-			Success: false,
-		})
-		return
-	}
-
-	// Verify Password (Check Hash first, then Plain Text fallback)
-	passwordMatch := false
-	isPlainText := false
-
-	err = bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(creds.Password))
-	if err == nil {
-		passwordMatch = true
-	} else {
-		// Fallback: Check if it's a legacy plain text password
-		if storedPassword == creds.Password {
-			passwordMatch = true
-			isPlainText = true
-		}
-	}
-
-	if passwordMatch {
-		// Reset failed attempts and update LastLogin
-		db.Exec("UPDATE Users SET FailedLoginAttempts = 0, LastLogin = GETDATE() WHERE ID = @p1", id)
-
-		// If it was plain text, migrate to bcrypt hash automatically
-		if isPlainText {
-			hashed, _ := bcrypt.GenerateFromPassword([]byte(creds.Password), bcrypt.DefaultCost)
-			db.Exec("UPDATE Users SET Password = @p1 WHERE ID = @p2", string(hashed), id)
-		}
-
-		// Login successful
-		token := fmt.Sprintf("sql-jwt-token-%s-secret-%s", creds.Email, strings.Split(appConfig.JWT.Secret, "-")[0])
-
-		pp := ""
-		if profilePicture.Valid {
-			pp = profilePicture.String
-		}
-
-		logActivity(creds.Email, "LOGIN", "User logged in")
-
-		json.NewEncoder(w).Encode(LoginResponse{
-			Message: "Login successful",
-			Token:   token,
-			Success: true,
-			User: &User{
-				ID:             id,
-				Email:          creds.Email,
-				ProfilePicture: pp,
-			},
-		})
-	} else {
-		// Increment failed attempts
-		newAttempts := failedAttempts + 1
-		db.Exec("UPDATE Users SET FailedLoginAttempts = @p1 WHERE ID = @p2", newAttempts, id)
-
-		logActivity(creds.Email, "LOGIN_FAILED", fmt.Sprintf("Wrong password. Attempt: %d", newAttempts))
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(LoginResponse{
-			Message: "Invalid credentials (Wrong password)",
-			Success: false,
-		})
-	}
-}
-
-func changePasswordHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	email := r.Header.Get("X-User-Email")
-
-	var req ChangePasswordRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
-	}
-
-	// Verify old password
-	var currentPassword string
-	err := db.QueryRow("SELECT Password FROM Users WHERE Email = @p1", email).Scan(&currentPassword)
-	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
-		return
-	}
-
-	// Verify old password (Hash or Plain)
-	err = bcrypt.CompareHashAndPassword([]byte(currentPassword), []byte(req.OldPassword))
-	if err != nil {
-		// Try plain text
-		if currentPassword != req.OldPassword {
-			http.Error(w, "Incorrect old password", http.StatusUnauthorized)
-			return
-		}
-	}
-
-	// Hash new password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
-	if err != nil {
-		http.Error(w, "Error hashing password", http.StatusInternalServerError)
-		return
-	}
-
-	// Update password
-	_, err = db.Exec("UPDATE Users SET Password = @p1, UpdatedAt = GETDATE() WHERE Email = @p2", string(hashedPassword), email)
-	if err != nil {
-		http.Error(w, "Failed to update password", http.StatusInternalServerError)
-		return
-	}
-
-	logActivity(email, "CHANGE_PASSWORD", "Password changed successfully")
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": "Password updated successfully"})
-}
-
-func uploadHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// Parse multipart form (10 MB limit)
-	err := r.ParseMultipartForm(10 << 20)
-	if err != nil {
-		http.Error(w, "File too large", http.StatusBadRequest)
-		return
-	}
-
-	file, handler, err := r.FormFile("profilePicture")
-	if err != nil {
-		http.Error(w, "Error retrieving file", http.StatusBadRequest)
-		return
-	}
-	defer file.Close()
-
-	email := r.Header.Get("X-User-Email")
-
-	// Create unique filename
-	filename := fmt.Sprintf("%d-%s", time.Now().Unix(), handler.Filename)
-
-	// Sanitize filename
-	filename = strings.ReplaceAll(filename, " ", "_")
-
-	// Ensure absolute path
-	cwd, _ := os.Getwd()
-	uploadPath := filepath.Join(cwd, "uploads", filename)
-
-	// Create destination file
-	dst, err := os.Create(uploadPath)
-	if err != nil {
-		log.Printf("Error creating file at %s: %v", uploadPath, err)
-		http.Error(w, "Error saving file", http.StatusInternalServerError)
-		return
-	}
-	defer dst.Close()
-
-	// Copy content
-	if _, err := io.Copy(dst, file); err != nil {
-		http.Error(w, "Error saving file content", http.StatusInternalServerError)
-		return
-	}
-
-	// Update DB
-	_, err = db.Exec("UPDATE Users SET ProfilePicture = @p1, UpdatedAt = GETDATE() WHERE Email = @p2", filename, email)
-	if err != nil {
-		http.Error(w, "Failed to update profile picture in DB", http.StatusInternalServerError)
-		return
-	}
-
-	logActivity(email, "UPLOAD_PICTURE", "Uploaded "+filename)
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"message":  "File uploaded successfully",
-		"filename": filename,
-	})
-}
-
-func logoutHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	email := r.Header.Get("X-User-Email")
-
-	// Update LastLogout
-	_, err := db.Exec("UPDATE Users SET LastLogout = GETDATE() WHERE Email = @p1", email)
-	if err != nil {
-		log.Printf("Failed to update LastLogout for %s: %v", email, err)
-	}
-
-	logActivity(email, "LOGOUT", "User logged out")
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": "Logout successful"})
-}
-
-// --- CRUD USERS HANDLERS ---
-
-func getUsersHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// Parse query params
-	pageStr := r.URL.Query().Get("page")
-	limitStr := r.URL.Query().Get("limit")
-	search := r.URL.Query().Get("search")
-
-	page, _ := strconv.Atoi(pageStr)
-	if page < 1 {
-		page = 1
-	}
-	limit, _ := strconv.Atoi(limitStr)
-	if limit < 1 {
-		limit = 5 // Default limit
-	}
-
-	offset := (page - 1) * limit
-
-	// Build query
-	whereClause := ""
-	params := []interface{}{}
-
-	if search != "" {
-		whereClause = "WHERE Name LIKE @p1 OR Email LIKE @p1"
-		params = append(params, "%"+search+"%")
-	}
-
-	// Get Total Count
-	var total int
-	countQuery := "SELECT COUNT(*) FROM Users " + whereClause
-	err := db.QueryRow(countQuery, params...).Scan(&total)
-	if err != nil {
-		http.Error(w, "Database error (count): "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Get Data
-	// SQL Server: OFFSET ... ROWS FETCH NEXT ... ROWS ONLY
-	// We append the pagination clause.
-	// Note: OFFSET/FETCH requires ORDER BY.
-	query := fmt.Sprintf("SELECT ID, Email, Name, Role, IsActive, ProfilePicture, LastLogin, LastLogout, FailedLoginAttempts FROM Users %s ORDER BY ID DESC OFFSET %d ROWS FETCH NEXT %d ROWS ONLY", whereClause, offset, limit)
-
-	rows, err := db.Query(query, params...)
-	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
-
-	var users []User
-	for rows.Next() {
-		var u User
-		var pp sql.NullString
-		var lastLogin, lastLogout sql.NullTime
-
-		if err := rows.Scan(&u.ID, &u.Email, &u.Name, &u.Role, &u.IsActive, &pp, &lastLogin, &lastLogout, &u.FailedLoginAttempts); err != nil {
-			log.Printf("Error scanning user: %v", err)
-			continue
-		}
-		if pp.Valid {
-			u.ProfilePicture = pp.String
-		}
-		if lastLogin.Valid {
-			t := lastLogin.Time
-			u.LastLogin = &t
-		}
-		if lastLogout.Valid {
-			t := lastLogout.Time
-			u.LastLogout = &t
-		}
-		users = append(users, u)
-	}
-
-	// If no users found, return empty array instead of null
-	if users == nil {
-		users = []User{}
-	}
-
-	resp := UsersResponse{
-		Data:  users,
-		Total: total,
-		Page:  page,
-		Limit: limit,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
-}
-
-func createUserHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var req CreateUserRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
-	}
-
-	// Check if email exists
-	var exists int
-	db.QueryRow("SELECT COUNT(*) FROM Users WHERE Email = @p1", req.Email).Scan(&exists)
-	if exists > 0 {
-		http.Error(w, "Email already exists", http.StatusConflict)
-		return
-	}
-
-	// Hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-	if err != nil {
-		http.Error(w, "Error hashing password", http.StatusInternalServerError)
-		return
-	}
-
-	// Insert
-	_, err = db.Exec(`INSERT INTO Users (Email, Password, Name, Role, IsActive, CreatedAt) 
-		VALUES (@p1, @p2, @p3, @p4, @p5, GETDATE())`,
-		req.Email, string(hashedPassword), req.Name, req.Role, req.IsActive)
-
-	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	logActivity(r.Header.Get("X-User-Email"), "CREATE_USER", "Created user "+req.Email)
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"message": "User created successfully"})
-}
-
-func updateUserHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var req UpdateUserRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
-	}
-
-	// Update query
-	query := `UPDATE Users SET Name=@p1, Role=@p2, IsActive=@p3, Email=@p4, UpdatedAt=GETDATE()`
-	params := []interface{}{req.Name, req.Role, req.IsActive, req.Email}
-
-	// Update password if provided
-	if req.Password != "" {
-		hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-		if err != nil {
-			http.Error(w, "Error hashing password", http.StatusInternalServerError)
-			return
-		}
-		query += `, Password=@p5`
-		params = append(params, string(hashed))
-		query += ` WHERE ID=@p6`
-		params = append(params, req.ID)
-	} else {
-		query += ` WHERE ID=@p5`
-		params = append(params, req.ID)
-	}
-
-	_, err := db.Exec(query, params...)
-	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	logActivity(r.Header.Get("X-User-Email"), "UPDATE_USER", fmt.Sprintf("Updated user ID %d", req.ID))
-	json.NewEncoder(w).Encode(map[string]string{"message": "User updated successfully"})
-}
-
-func deleteUserHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	idStr := r.URL.Query().Get("id")
-	if idStr == "" {
-		http.Error(w, "Missing id parameter", http.StatusBadRequest)
-		return
-	}
-
-	_, err := db.Exec("DELETE FROM Users WHERE ID = @p1", idStr)
-	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	logActivity(r.Header.Get("X-User-Email"), "DELETE_USER", "Deleted user ID "+idStr)
-	json.NewEncoder(w).Encode(map[string]string{"message": "User deleted successfully"})
-}
-
 func initGorm() {
 	dsn := fmt.Sprintf("server=%s;user id=%s;password=%s;database=%s",
 		appConfig.Database.Host,
@@ -716,91 +151,92 @@ func initGorm() {
 	var err error
 	gormDB, err = gorm.Open(sqlserver.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatal("Failed to connect to database via GORM:", err)
+		log.Printf("Warning: Could not connect to SQL Server via GORM: %v", err)
+		return
 	}
 
-	// Auto Migrate
+	// Auto Migrate SystemConfig
+	// Note: User migration is handled by manual SQL in migrateDB for now to preserve existing logic
 	err = gormDB.AutoMigrate(&models.SystemConfig{}, &models.SystemConfigHistory{})
 	if err != nil {
-		log.Printf("GORM AutoMigrate failed: %v", err)
-	} else {
-		log.Println("GORM AutoMigrate completed.")
-		seedConfigDB()
+		log.Printf("Warning: AutoMigrate failed: %v", err)
 	}
+
+	seedConfigDB(gormDB)
 }
 
-func seedConfigDB() {
-	configs := []models.SystemConfig{
-		{
-			ConfigKey:   "site_name",
-			DataType:    models.TypeString,
-			MainValue:   "My Application",
-			Description: "Application Name",
-			IsActive:    true,
-			CreatedBy:   "system",
-		},
-		{
-			ConfigKey:   "maintenance_mode",
-			DataType:    models.TypeBoolean,
-			MainValue:   "false",
-			Description: "Enable/Disable Maintenance Mode",
-			IsActive:    true,
-			CreatedBy:   "system",
-		},
-		{
-			ConfigKey:   "max_upload_size",
-			DataType:    models.TypeInteger,
-			MainValue:   "10485760",
-			Description: "Max upload size in bytes (10MB)",
-			IsActive:    true,
-			CreatedBy:   "system",
-		},
-	}
-
-	for _, cfg := range configs {
-		var count int64
-		gormDB.Model(&models.SystemConfig{}).Where("config_key = ?", cfg.ConfigKey).Count(&count)
-		if count == 0 {
-			if err := gormDB.Create(&cfg).Error; err != nil {
-				log.Printf("Failed to seed config %s: %v", cfg.ConfigKey, err)
-			} else {
-				log.Printf("Seeded config: %s", cfg.ConfigKey)
-			}
+// seedConfigDB seeds the system_configs table with default values if empty
+func seedConfigDB(db *gorm.DB) {
+	var count int64
+	db.Model(&models.SystemConfig{}).Count(&count)
+	if count == 0 {
+		log.Println("Seeding system_configs...")
+		configs := []models.SystemConfig{
+			{ConfigKey: "site_name", MainValue: "My App", Description: "The name of the application"},
+			{ConfigKey: "maintenance_mode", MainValue: "false", Description: "Enable/disable maintenance mode"},
+			{ConfigKey: "max_upload_size", MainValue: "10MB", Description: "Maximum file upload size"},
+			{ConfigKey: "theme", MainValue: "light", Description: "Default UI theme"},
+		}
+		if err := db.Create(&configs).Error; err != nil {
+			log.Printf("Failed to seed system_configs: %v", err)
+		} else {
+			log.Println("System configs seeded successfully.")
 		}
 	}
 }
 
 func main() {
-	// Load Configuration
+	// Load configuration
 	var err error
 	appConfig, err = config.LoadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
-	}
-
-	// Ensure uploads directory exists
-	if _, err := os.Stat("uploads"); os.IsNotExist(err) {
-		if err := os.Mkdir("uploads", 0755); err != nil {
-			log.Printf("Warning: Failed to create uploads directory: %v", err)
-		}
+		log.Fatal("Error loading config: ", err)
 	}
 
 	// Initialize Database
 	initDB()
-	defer db.Close()
+	initGorm()
+
+	// Initialize Repositories
+	userRepo := repository.NewUserRepository(db)
+	configRepo := repository.NewConfigRepository(gormDB)
+
+	// Initialize Services
+	userService := services.NewUserService(userRepo)
+	authService := services.NewAuthService(userRepo, appConfig)
+	configService := services.NewConfigService(configRepo)
+
+	// Initialize Handlers
+	userHandler := handlers.NewUserHandler(userService)
+	authHandler := handlers.NewAuthHandler(authService)
+	configHandler := handlers.NewConfigHandler(configService)
 
 	mux := http.NewServeMux()
 
-	// Initialize GORM
-	initGorm()
+	// Auth Routes
+	mux.HandleFunc("/login", middleware.EnableCORS(authHandler.Login))
+	mux.HandleFunc("/logout", middleware.EnableCORS(middleware.AuthMiddleware(authHandler.Logout)))
+	mux.HandleFunc("/change-password", middleware.EnableCORS(middleware.AuthMiddleware(authHandler.ChangePassword)))
 
-	// Config Dependency Injection
-	configRepo := repository.NewConfigRepository(gormDB)
-	configService := services.NewConfigService(configRepo)
-	configHandler := handlers.NewConfigHandler(configService)
+	// User Routes
+	mux.HandleFunc("/api/users", middleware.EnableCORS(middleware.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			userHandler.GetUsers(w, r)
+		} else if r.Method == http.MethodPost {
+			userHandler.CreateUser(w, r)
+		} else if r.Method == http.MethodPut {
+			userHandler.UpdateUser(w, r)
+		} else if r.Method == http.MethodDelete {
+			userHandler.DeleteUser(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
+
+	mux.HandleFunc("/upload", middleware.EnableCORS(middleware.AuthMiddleware(userHandler.UploadProfilePicture)))
 
 	// Config Routes
-	mux.HandleFunc("/api/configs", enableCORS(authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/configs", middleware.EnableCORS(middleware.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/api/configs" {
 			if r.Method == http.MethodGet {
 				configHandler.GetConfigs(w, r)
@@ -814,90 +250,47 @@ func main() {
 		}
 	})))
 
-	mux.HandleFunc("/api/configs/", enableCORS(authMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, "/history") {
+	mux.HandleFunc("/api/configs/", middleware.EnableCORS(middleware.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+
+		// Handle /api/configs/{id}/history
+		// Check this FIRST because it's more specific than /api/configs/{id}
+		if strings.HasSuffix(path, "/history") && r.Method == http.MethodGet {
 			configHandler.GetHistory(w, r)
 			return
 		}
 
-		if r.Method == http.MethodGet {
-			configHandler.GetConfig(w, r)
-		} else if r.Method == http.MethodPut {
-			configHandler.UpdateConfig(w, r)
-		} else if r.Method == http.MethodDelete {
-			configHandler.DeleteConfig(w, r)
-		} else {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		// Handle /api/configs/{id}
+		if len(path) > len("/api/configs/") {
+			if r.Method == http.MethodGet {
+				configHandler.GetConfig(w, r)
+				return
+			} else if r.Method == http.MethodPut {
+				configHandler.UpdateConfig(w, r)
+				return
+			} else if r.Method == http.MethodDelete {
+				configHandler.DeleteConfig(w, r)
+				return
+			}
 		}
+
+		http.NotFound(w, r)
 	})))
 
-	// Public routes
-	mux.HandleFunc("/login", enableCORS(loginHandler))
+	// Serve Static Files
+	fs := http.FileServer(http.Dir("../react-pertama"))
+	mux.Handle("/", fs)
 
-	// Static files (Uploads)
-	// IMPORTANT: Ensure the URL prefix matches the path structure
-	fileServer := http.FileServer(http.Dir("./uploads"))
-	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		fileServer.ServeHTTP(w, r)
-	})))
+	// Serve Uploaded Files
+	// Create uploads directory if it doesn't exist
+	if _, err := os.Stat("uploads"); os.IsNotExist(err) {
+		os.Mkdir("uploads", 0755)
+	}
+	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("uploads"))))
 
-	// Protected routes
-	mux.HandleFunc("/change-password", enableCORS(authMiddleware(changePasswordHandler)))
-	mux.HandleFunc("/upload-picture", enableCORS(authMiddleware(uploadHandler)))
-	mux.HandleFunc("/logout", enableCORS(authMiddleware(logoutHandler)))
-
-	// User CRUD Routes
-	mux.HandleFunc("/api/users", enableCORS(authMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			getUsersHandler(w, r)
-		} else if r.Method == http.MethodPost {
-			createUserHandler(w, r)
-		} else if r.Method == http.MethodPut {
-			updateUserHandler(w, r)
-		} else if r.Method == http.MethodDelete {
-			deleteUserHandler(w, r)
-		} else {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})))
-
-	// Frontend Static Files
-	// Assumes react-pertama is at ../react-pertama
-	frontendPath := "../react-pertama"
-	fs := http.FileServer(http.Dir(frontendPath))
-
-	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// If route starts with /src/ or /assets/ or ends with .js/.css/.svg/.png, serve file directly
-		if strings.HasPrefix(r.URL.Path, "/src/") ||
-			strings.HasPrefix(r.URL.Path, "/assets/") ||
-			strings.HasSuffix(r.URL.Path, ".js") ||
-			strings.HasSuffix(r.URL.Path, ".jsx") ||
-			strings.HasSuffix(r.URL.Path, ".css") ||
-			strings.HasSuffix(r.URL.Path, ".svg") {
-			fs.ServeHTTP(w, r)
-			return
-		}
-
-		// Otherwise, serve index.html for SPA routing (except for specific API routes already matched)
-		// Note: http.ServeMux matches longest pattern. /login etc are already matched.
-		// Only unmatched routes come here (if mapped to /)
-
-		path := filepath.Join(frontendPath, r.URL.Path)
-		// Check if file exists (e.g. vite.svg at root)
-		info, err := os.Stat(path)
-		if err == nil && !info.IsDir() {
-			fs.ServeHTTP(w, r)
-			return
-		}
-
-		// Fallback to index.html
-		http.ServeFile(w, r, filepath.Join(frontendPath, "index.html"))
-	}))
-
-	port := appConfig.App.Port
-	fmt.Printf("Server starting on port %s in %s mode...\n", port, appConfig.App.Env)
+	port := "8080"
+	fmt.Printf("Server starting on port %s...\n", port)
 	if err := http.ListenAndServe(":"+port, mux); err != nil {
-		fmt.Printf("Error starting server: %s\n", err)
+		log.Fatal(err)
 	}
 }
