@@ -3,6 +3,7 @@ const { useState, useEffect } = React;
 const $ = window.jQuery;
 import config from '/src/config.js';
 import Users from '/src/Users.jsx';
+import Config from '/src/Config.jsx';
 import ChangePassword from '/src/ChangePassword.jsx';
 
 // --- Components ---
@@ -42,7 +43,14 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
       ]
     },
     { id: 'orders', label: 'Orders', icon: 'fa-solid fa-cart-shopping' },
-    { id: 'settings', label: 'Settings', icon: 'fa-solid fa-gear' },
+    { 
+      id: 'settings', 
+      label: 'Settings', 
+      icon: 'fa-solid fa-gear',
+      children: [
+        { id: 'config', label: 'Config', icon: 'fa-solid fa-sliders' }
+      ]
+    },
     { id: 'docs', label: 'Documentation', icon: 'fa-solid fa-book' },
     { id: 'support', label: 'Support', icon: 'fa-solid fa-headset' },
     { id: 'logs', label: 'System Logs', icon: 'fa-solid fa-file-code' }
@@ -410,6 +418,8 @@ function DashboardContent({ activeMenu }) {
   
   // Minimal placeholder for settings to keep it working
   if (activeMenu === 'settings') return React.createElement('div', { className: 'modern-card p-4 animate-fade-in' }, 'Settings Page');
+  
+  if (activeMenu === 'config') return React.createElement(Config);
   
   return null;
 }

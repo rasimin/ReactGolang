@@ -14,9 +14,15 @@ import (
 	"time"
 
 	"go-pertama/config"
+	"go-pertama/handlers"
+	"go-pertama/models"
+	"go-pertama/repository"
+	"go-pertama/services"
 
 	_ "github.com/microsoft/go-mssqldb"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/driver/sqlserver"
+	"gorm.io/gorm"
 )
 
 // Global configuration
@@ -24,6 +30,7 @@ var appConfig *config.Config
 
 // Global database connection pool
 var db *sql.DB
+var gormDB *gorm.DB
 
 type LoginRequest struct {
 	Email    string `json:"email"`
@@ -695,6 +702,74 @@ func deleteUserHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "User deleted successfully"})
 }
 
+func initGorm() {
+	dsn := fmt.Sprintf("server=%s;user id=%s;password=%s;database=%s",
+		appConfig.Database.Host,
+		appConfig.Database.User,
+		appConfig.Database.Password,
+		appConfig.Database.DBName,
+	)
+	if appConfig.Database.Port != "" {
+		dsn += fmt.Sprintf(";port=%s", appConfig.Database.Port)
+	}
+
+	var err error
+	gormDB, err = gorm.Open(sqlserver.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Fatal("Failed to connect to database via GORM:", err)
+	}
+
+	// Auto Migrate
+	err = gormDB.AutoMigrate(&models.SystemConfig{}, &models.SystemConfigHistory{})
+	if err != nil {
+		log.Printf("GORM AutoMigrate failed: %v", err)
+	} else {
+		log.Println("GORM AutoMigrate completed.")
+		seedConfigDB()
+	}
+}
+
+func seedConfigDB() {
+	configs := []models.SystemConfig{
+		{
+			ConfigKey:   "site_name",
+			DataType:    models.TypeString,
+			MainValue:   "My Application",
+			Description: "Application Name",
+			IsActive:    true,
+			CreatedBy:   "system",
+		},
+		{
+			ConfigKey:   "maintenance_mode",
+			DataType:    models.TypeBoolean,
+			MainValue:   "false",
+			Description: "Enable/Disable Maintenance Mode",
+			IsActive:    true,
+			CreatedBy:   "system",
+		},
+		{
+			ConfigKey:   "max_upload_size",
+			DataType:    models.TypeInteger,
+			MainValue:   "10485760",
+			Description: "Max upload size in bytes (10MB)",
+			IsActive:    true,
+			CreatedBy:   "system",
+		},
+	}
+
+	for _, cfg := range configs {
+		var count int64
+		gormDB.Model(&models.SystemConfig{}).Where("config_key = ?", cfg.ConfigKey).Count(&count)
+		if count == 0 {
+			if err := gormDB.Create(&cfg).Error; err != nil {
+				log.Printf("Failed to seed config %s: %v", cfg.ConfigKey, err)
+			} else {
+				log.Printf("Seeded config: %s", cfg.ConfigKey)
+			}
+		}
+	}
+}
+
 func main() {
 	// Load Configuration
 	var err error
@@ -715,6 +790,46 @@ func main() {
 	defer db.Close()
 
 	mux := http.NewServeMux()
+
+	// Initialize GORM
+	initGorm()
+
+	// Config Dependency Injection
+	configRepo := repository.NewConfigRepository(gormDB)
+	configService := services.NewConfigService(configRepo)
+	configHandler := handlers.NewConfigHandler(configService)
+
+	// Config Routes
+	mux.HandleFunc("/api/configs", enableCORS(authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/configs" {
+			if r.Method == http.MethodGet {
+				configHandler.GetConfigs(w, r)
+			} else if r.Method == http.MethodPost {
+				configHandler.CreateConfig(w, r)
+			} else {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			}
+		} else {
+			http.NotFound(w, r)
+		}
+	})))
+
+	mux.HandleFunc("/api/configs/", enableCORS(authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/history") {
+			configHandler.GetHistory(w, r)
+			return
+		}
+
+		if r.Method == http.MethodGet {
+			configHandler.GetConfig(w, r)
+		} else if r.Method == http.MethodPut {
+			configHandler.UpdateConfig(w, r)
+		} else if r.Method == http.MethodDelete {
+			configHandler.DeleteConfig(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
 
 	// Public routes
 	mux.HandleFunc("/login", enableCORS(loginHandler))
