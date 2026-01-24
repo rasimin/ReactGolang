@@ -57,6 +57,70 @@ body {
   transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), color 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Loading Screen */
+.loading-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-body);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  transition: opacity 0.5s ease-out;
+}
+
+.spinner-modern {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(99, 102, 241, 0.1);
+  border-left-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  margin-top: 1rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Local Loading Overlay */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  backdrop-filter: blur(2px);
+  border-radius: inherit;
+}
+
+body.dark .loading-overlay {
+  background-color: rgba(17, 24, 39, 0.8);
+}
+
 /* Animations */
 @keyframes fadeInUp {
   from {
@@ -109,6 +173,8 @@ body.dark .login-bg::before {
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.5);
   box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+  position: relative;
+  overflow: hidden;
 }
 
 body.dark .glass-card {
@@ -252,6 +318,30 @@ body.dark .form-control-modern:focus {
 
 .modal-content {
   border: none;
+  background-color: var(--bg-card);
+  color: var(--text-main);
+}
+
+body.dark .modal-content {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+}
+
+body.dark .modal-header,
+body.dark .modal-footer {
+    border-color: var(--border-color);
+}
+
+body.dark .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* Fix for Input Groups in Dark Mode */
+body.dark .input-group-text {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: var(--border-color);
+    color: var(--text-muted);
 }
 
 /* Table Dark Mode Enhancements */
@@ -524,4 +614,61 @@ body.dark .modern-card {
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
+}
+
+/* --- Table Modern (Standard Compact Grid) --- */
+.table-modern {
+  border-collapse: collapse !important;
+  width: 100%;
+}
+
+.table-modern thead th {
+  border-bottom: 2px solid var(--border-color);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  background-color: var(--bg-modern-subtle) !important;
+}
+
+.table-modern tbody tr {
+  background-color: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.2s ease;
+}
+
+.table-modern tbody tr:last-child {
+  border-bottom: none;
+}
+
+.table-modern tbody tr td {
+  border: none;
+  padding: 0.75rem 1rem;
+  vertical-align: middle;
+}
+
+.table-modern tbody tr:hover {
+  transform: none;
+  box-shadow: none;
+  background-color: var(--hover-bg);
+  cursor: pointer;
+}
+
+/* Dark mode adjustments for table */
+body.dark .table-modern tbody tr {
+  background-color: transparent;
+  border-color: var(--border-color);
+}
+
+body.dark .table-modern tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+body.dark .table-modern thead th {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  border-bottom-color: var(--border-color);
 }

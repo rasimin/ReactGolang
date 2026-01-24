@@ -132,17 +132,24 @@ export default function Users() {
     setShowModal(true);
   };
 
-  if (loading) return React.createElement('div', null, 'Loading...');
-  if (error) return React.createElement('div', null, `Error: ${error}`);
+  // Modern Loading State
+  if (loading) {
+    return React.createElement('div', { className: 'd-flex flex-column justify-content-center align-items-center', style: { minHeight: '60vh' } }, [
+      React.createElement('div', { key: 'spinner', className: 'spinner-modern' }),
+      React.createElement('div', { key: 'text', className: 'loading-text' }, 'LOADING DATA...')
+    ]);
+  }
+
+  if (error) return React.createElement('div', { className: 'alert alert-danger' }, `Error: ${error}`);
 
   const filteredUsers = users.filter(user => 
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  return React.createElement('div', { className: 'modern-card p-0 overflow-hidden animate-fade-in rounded-0 border-0 shadow-none' }, [
+  return React.createElement('div', { className: 'modern-card p-4 animate-fade-in' }, [
       // Header
-      React.createElement('div', { key: 'header', className: 'p-4 border-bottom bg-modern-subtle d-flex flex-wrap gap-3 justify-content-between align-items-center' }, [
+      React.createElement('div', { key: 'header', className: 'd-flex flex-wrap gap-3 justify-content-between align-items-center mb-4' }, [
         React.createElement('h5', { className: 'fw-bold mb-0' }, 'User Management'),
         React.createElement('div', { className: 'd-flex gap-3 align-items-center' }, [
             // Modern Search Input
@@ -166,21 +173,21 @@ export default function Users() {
       
       // Table
       React.createElement('div', { key: 'table', className: 'table-responsive' }, 
-        React.createElement('table', { className: 'table table-hover align-middle mb-0' }, [
-          React.createElement('thead', { className: 'bg-modern-subtle' }, 
+        React.createElement('table', { className: 'table table-hover align-middle mb-0 table-modern' }, [
+          React.createElement('thead', null, 
             React.createElement('tr', null, [
-              React.createElement('th', { className: 'ps-4 py-3' }, 'Name'),
-              React.createElement('th', { className: 'py-3' }, 'Email'),
-              React.createElement('th', { className: 'py-3' }, 'Role'),
-              React.createElement('th', { className: 'py-3' }, 'Status'),
-              React.createElement('th', { className: 'py-3 text-end pe-4' }, 'Actions'),
+              React.createElement('th', null, 'Name'),
+              React.createElement('th', null, 'Email'),
+              React.createElement('th', null, 'Role'),
+              React.createElement('th', null, 'Status'),
+              React.createElement('th', { className: 'text-end' }, 'Actions'),
             ])
           ),
           React.createElement('tbody', null, 
             filteredUsers.length > 0 ? filteredUsers.map(user => 
                 React.createElement('tr', { key: user.id }, [
                     // Name Column
-                    React.createElement('td', { className: 'ps-4' }, 
+                    React.createElement('td', null, 
                         React.createElement('div', { className: 'd-flex align-items-center' }, [
                             React.createElement('div', { className: 'rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-3', style: { width: '32px', height: '32px' } }, 
                                 user.profilePicture 
@@ -195,7 +202,7 @@ export default function Users() {
                     // Email
                     React.createElement('td', null, React.createElement('small', { className: 'text-muted' }, user.email)),
                     // Role
-                    React.createElement('td', null, React.createElement('span', { className: 'badge bg-light text-dark border' }, user.role)),
+                    React.createElement('td', null, React.createElement('span', { className: 'badge bg-modern-subtle text-dark border' }, user.role)),
                     // Status
                     React.createElement('td', null, 
                         user.isActive 
@@ -203,7 +210,7 @@ export default function Users() {
                             : React.createElement('span', { className: 'badge bg-danger bg-opacity-10 text-danger' }, 'Inactive')
                     ),
                     // Actions
-                    React.createElement('td', { className: 'text-end pe-4' }, [
+                    React.createElement('td', { className: 'text-end' }, [
                         React.createElement('button', { className: 'btn btn-sm btn-link text-primary', onClick: () => openEditModal(user) }, 
                             React.createElement('i', { className: 'fa-solid fa-pen-to-square' })
                         ),
@@ -244,7 +251,7 @@ export default function Users() {
           React.createElement('div', { className: 'modal-dialog modal-dialog-centered' }, 
               React.createElement('div', { className: 'modal-content border-0 shadow-lg animate-fade-in overflow-hidden', style: { borderRadius: '20px' } }, [
                   // Modal Header
-                  React.createElement('div', { className: 'modal-header border-bottom-0 bg-light' }, [
+                  React.createElement('div', { className: 'modal-header border-bottom-0 bg-modern-subtle' }, [
                       React.createElement('h5', { className: 'modal-title fw-bold' }, modalMode === 'add' ? 'Add New User' : 'Edit User'),
                       React.createElement('button', { type: 'button', className: 'btn-close', onClick: () => setShowModal(false) })
                   ]),
@@ -288,8 +295,8 @@ export default function Users() {
                       ])
                   ),
                   // Modal Footer
-                  React.createElement('div', { className: 'modal-footer border-top-0 bg-light' }, [
-                      React.createElement('button', { type: 'button', className: 'btn btn-light rounded-pill px-4', onClick: () => setShowModal(false) }, 'Cancel'),
+                  React.createElement('div', { className: 'modal-footer border-top-0 bg-modern-subtle' }, [
+                      React.createElement('button', { type: 'button', className: 'btn btn-modern-light rounded-pill px-4', onClick: () => setShowModal(false) }, 'Cancel'),
                       React.createElement('button', { type: 'button', className: 'btn btn-primary rounded-pill px-4 btn-primary-modern', onClick: handleSave }, 'Save Changes')
                   ])
               ])

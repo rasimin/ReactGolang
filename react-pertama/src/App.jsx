@@ -185,7 +185,7 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
   ]);
 }
 
-function Header({ title, onLogout, isDarkMode, toggleTheme, toggleSidebar, setActiveMenu }) {
+function Header({ title, onLogout, isDarkMode, toggleTheme, toggleSidebar, setActiveMenu, togglePasswordModal }) {
   // Dummy Notification Data
   const notifications = [
     { id: 1, title: 'New Order #1023', time: '5m ago', icon: 'fa-box', color: 'primary', unread: true },
@@ -319,7 +319,7 @@ function Header({ title, onLogout, isDarkMode, toggleTheme, toggleSidebar, setAc
                 href: '#',
                 onClick: (e) => {
                   e.preventDefault();
-                  setActiveMenu('security');
+                  togglePasswordModal();
                 }
               }, [
                 React.createElement('i', { className: 'fa-solid fa-lock me-2' }), 'Security'
@@ -393,10 +393,6 @@ function DashboardContent({ activeMenu }) {
   if (activeMenu === 'users') {
     return React.createElement(Users);
   }
-
-  if (activeMenu === 'security') {
-    return React.createElement(ChangePassword);
-  }
   
   // Minimal placeholder for settings to keep it working
   if (activeMenu === 'settings') return React.createElement('div', { className: 'modern-card p-4 animate-fade-in' }, 'Settings Page');
@@ -404,8 +400,17 @@ function DashboardContent({ activeMenu }) {
   return null;
 }
 
-function DashboardLayout({ onLogout, isDarkMode, toggleTheme }) {
-  const [activeMenu, setActiveMenu] = useState('dashboard');
+function DashboardLayout({ onLogout, isDarkMode, toggleTheme, togglePasswordModal }) {
+  // Initialize from localStorage to persist state across refreshes
+  const [activeMenu, setActiveMenu] = useState(() => {
+    return localStorage.getItem('activeMenu') || 'dashboard';
+  });
+
+  // Save to localStorage whenever activeMenu changes
+  useEffect(() => {
+    localStorage.setItem('activeMenu', activeMenu);
+  }, [activeMenu]);
+
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const toggleSidebar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
@@ -428,7 +433,8 @@ function DashboardLayout({ onLogout, isDarkMode, toggleTheme }) {
         isDarkMode: isDarkMode,
         toggleTheme: toggleTheme,
         toggleSidebar: toggleSidebar,
-        setActiveMenu: setActiveMenu
+        setActiveMenu: setActiveMenu,
+        togglePasswordModal: togglePasswordModal
       }),
       React.createElement('main', { 
         key: 'main', 
@@ -490,6 +496,13 @@ function LoginPage({ onLogin, isDarkMode, toggleTheme }) {
       React.createElement('div', { className: 'row justify-content-center' },
         React.createElement('div', { className: 'col-md-5 col-lg-4' },
           React.createElement('div', { className: `glass-card p-4 p-md-5` }, [
+            
+            // Loading Overlay
+            isLoading && React.createElement('div', { key: 'loading-overlay', className: 'loading-overlay', style: { zIndex: 20 } }, [
+                React.createElement('div', { key: 'spinner', className: 'spinner-modern' }),
+                React.createElement('div', { key: 'text', className: 'loading-text' }, 'SIGNING IN...')
+            ]),
+
             React.createElement('div', { key: 'header', className: 'text-center mb-4' }, [
               React.createElement('div', { className: 'd-inline-flex align-items-center justify-content-center bg-modern-subtle rounded-circle shadow-sm mb-3', style: { width: '64px', height: '64px' } },
                  React.createElement('i', { className: 'fa-brands fa-react fa-2x text-primary' })
@@ -546,23 +559,36 @@ function LoginPage({ onLogin, isDarkMode, toggleTheme }) {
   );
 }
 
+function LoadingScreen() {
+  return React.createElement('div', { className: 'loading-screen' }, [
+    React.createElement('div', { key: 'spinner', className: 'spinner-modern' }),
+    React.createElement('div', { key: 'text', className: 'loading-text' }, 'LOADING...')
+  ]);
+}
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   // Check login status on mount
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      setIsLoggedIn(true);
-    }
-    
-    // Check theme preference
+    // Check theme preference immediately to avoid flash
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
       setIsDarkMode(true);
       document.body.classList.add('dark');
     }
+
+    // Simulate a brief loading check for better UX
+    setTimeout(() => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        setIsLoggedIn(true);
+      }
+      setIsLoading(false);
+    }, 800); // 0.8s delay for smooth animation
   }, []);
 
   const toggleTheme = () => {
@@ -576,11 +602,16 @@ function App() {
     }
   };
 
+  const togglePasswordModal = () => {
+    setIsPasswordModalOpen(!isPasswordModalOpen);
+  };
+
   const handleLogin = (user) => {
     setIsLoggedIn(true);
   };
 
   const handleLogout = async () => {
+    setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
       if (token) {
@@ -597,8 +628,17 @@ function App() {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       setIsLoggedIn(false);
+      
+      // Small delay to show the loading screen briefly before showing login
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 500);
     }
   };
+
+  if (isLoading) {
+    return React.createElement(LoadingScreen);
+  }
 
   if (!isLoggedIn) {
     return React.createElement(LoginPage, { 
@@ -608,11 +648,20 @@ function App() {
     });
   }
 
-  return React.createElement(DashboardLayout, { 
-    onLogout: handleLogout,
-    isDarkMode: isDarkMode,
-    toggleTheme: toggleTheme
-  });
+  return React.createElement(React.Fragment, null, [
+    React.createElement(DashboardLayout, { 
+      key: 'layout',
+      onLogout: handleLogout,
+      isDarkMode: isDarkMode,
+      toggleTheme: toggleTheme,
+      togglePasswordModal: togglePasswordModal
+    }),
+    React.createElement(ChangePassword, { 
+      key: 'pw-modal',
+      isOpen: isPasswordModalOpen, 
+      onClose: () => setIsPasswordModalOpen(false) 
+    })
+  ]);
 }
 
 export default App;
