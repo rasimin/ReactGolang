@@ -9,6 +9,8 @@ import Toast from '/src/Toast.jsx';
 import ChangeLog from '/src/ChangeLog.jsx';
 import Profile from '/src/Profile.jsx';
 import Roles from '/src/Roles.jsx';
+import Workspaces from '/src/Workspaces.jsx';
+import Transactions from '/src/Transactions.jsx';
 
 // --- Components ---
 
@@ -25,6 +27,8 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'fa-solid fa-gauge' },
+    { id: 'workspaces', label: 'Workspaces', icon: 'fa-solid fa-building' },
+    { id: 'transactions', label: 'Transactions', icon: 'fa-solid fa-money-bill-transfer' },
     { id: 'users', label: 'Users', icon: 'fa-solid fa-users' },
     { id: 'roles', label: 'Roles Access', icon: 'fa-solid fa-shield-halved' },
 
@@ -411,6 +415,14 @@ function DashboardContent({ activeMenu, showToast }) {
   }
 
   // Users and Settings components remain similar but wrapped in modern-card...
+  if (activeMenu === 'workspaces') {
+    return React.createElement(Workspaces, { showToast });
+  }
+
+  if (activeMenu === 'transactions') {
+    return React.createElement(Transactions, { showToast });
+  }
+
   if (activeMenu === 'users') {
     return React.createElement(Users, { showToast });
   }
