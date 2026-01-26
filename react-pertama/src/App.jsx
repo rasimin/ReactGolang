@@ -11,6 +11,7 @@ import Profile from '/src/Profile.jsx';
 import Roles from '/src/Roles.jsx';
 import Workspaces from '/src/Workspaces.jsx';
 import Transactions from '/src/Transactions.jsx';
+import Documentation from '/src/Documentation.jsx';
 
 // --- Components ---
 
@@ -439,6 +440,8 @@ function DashboardContent({ activeMenu, showToast }) {
   if (activeMenu === 'changelog') return React.createElement(ChangeLog, { showToast });
 
   if (activeMenu === 'profile') return React.createElement(Profile, { showToast });
+
+  if (activeMenu === 'docs') return React.createElement(Documentation, { showToast });
   
   return null;
 }
