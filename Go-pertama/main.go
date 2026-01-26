@@ -191,20 +191,23 @@ func initGorm() {
 
 // seedConfigDB seeds the system_configs table with default values if empty
 func seedConfigDB(db *gorm.DB) {
-	var count int64
-	db.Model(&models.SystemConfig{}).Count(&count)
-	if count == 0 {
-		log.Println("Seeding system_configs...")
-		configs := []models.SystemConfig{
-			{ConfigKey: "site_name", MainValue: "My App", Description: "The name of the application"},
-			{ConfigKey: "maintenance_mode", MainValue: "false", Description: "Enable/disable maintenance mode"},
-			{ConfigKey: "max_upload_size", MainValue: "10MB", Description: "Maximum file upload size"},
-			{ConfigKey: "theme", MainValue: "light", Description: "Default UI theme"},
-		}
-		if err := db.Create(&configs).Error; err != nil {
-			log.Printf("Failed to seed system_configs: %v", err)
-		} else {
-			log.Println("System configs seeded successfully.")
+	configs := []models.SystemConfig{
+		{ConfigKey: "site_name", MainValue: "My App", Description: "The name of the application", DataType: models.TypeString},
+		{ConfigKey: "maintenance_mode", MainValue: "false", Description: "Enable/disable maintenance mode", DataType: models.TypeBoolean},
+		{ConfigKey: "max_upload_size", MainValue: "10MB", Description: "Maximum file upload size", DataType: models.TypeString},
+		{ConfigKey: "theme", MainValue: "light", Description: "Default UI theme", DataType: models.TypeString},
+		{ConfigKey: "pagination_limit", MainValue: "5", Description: "Default number of items per page for pagination", DataType: models.TypeInteger},
+	}
+
+	for _, config := range configs {
+		var count int64
+		db.Model(&models.SystemConfig{}).Where("config_key = ?", config.ConfigKey).Count(&count)
+		if count == 0 {
+			if err := db.Create(&config).Error; err != nil {
+				log.Printf("Failed to seed config %s: %v", config.ConfigKey, err)
+			} else {
+				log.Printf("Seeded config: %s", config.ConfigKey)
+			}
 		}
 	}
 }

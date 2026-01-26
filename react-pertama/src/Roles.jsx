@@ -67,6 +67,34 @@ export default function Roles({ showToast }) {
     setCurrentPage(1);
   }, [searchQuery]);
 
+  // Fetch system configs for pagination limit
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch(`${config.api.baseUrl}/api/configs`, {
+          headers: {
+            'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          // Config API returns paginated response { data: [], total: ... }
+          const configList = data.data || (Array.isArray(data) ? data : []);
+          const paginationConfig = configList.find(c => c.configKey === 'pagination_limit');
+          if (paginationConfig) {
+            const limit = parseInt(paginationConfig.mainValue, 10);
+            if (!isNaN(limit) && limit > 0) {
+              setItemsPerPage(limit);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching pagination config:', error);
+      }
+    };
+    fetchConfig();
+  }, []);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchRoles();
