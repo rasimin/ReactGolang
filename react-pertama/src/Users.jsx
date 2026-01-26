@@ -1,5 +1,7 @@
 const React = window.React;
 const ReactDOM = window.ReactDOM; // Add ReactDOM
+import Pagination from './Pagination.jsx';
+import SearchInput from './SearchInput.jsx';
 import config from './config.js';
 const { useState, useEffect } = React;
 
@@ -234,19 +236,13 @@ export default function Users({ showToast }) {
         React.createElement('h5', { key: 'title', className: 'fw-bold mb-0' }, 'User Management'),
         React.createElement('div', { key: 'actions', className: 'd-flex gap-3 align-items-center' }, [
             // Modern Search Input
-            React.createElement('div', { className: 'search-container-modern' }, [
-                loading && !isFirstLoad 
-                    ? React.createElement('div', { key: 'spinner', className: 'spinner-border text-primary spinner-border-sm me-2', role: 'status' })
-                    : React.createElement('i', { key: 'icon', className: 'fa-solid fa-magnifying-glass text-muted small' }),
-                React.createElement('input', { 
-                    key: 'input',
-                    type: 'text', 
-                    className: 'search-input-modern', 
-                    placeholder: 'Search users...',
-                    value: searchQuery,
-                    onChange: (e) => setSearchQuery(e.target.value)
-                })
-            ]),
+            React.createElement(SearchInput, {
+              key: 'search',
+              value: searchQuery,
+              onChange: (e) => setSearchQuery(e.target.value),
+              placeholder: 'Search users...',
+              isLoading: loading && !isFirstLoad
+            }),
             // Modern Add Button
             React.createElement('button', { className: 'btn-add-modern', onClick: openAddModal }, [
                 React.createElement('i', { key: 'icon', className: 'fa-solid fa-plus' }),
@@ -259,9 +255,12 @@ export default function Users({ showToast }) {
       React.createElement('div', { key: 'table', className: 'table-responsive position-relative' }, [
         loading && !isFirstLoad && React.createElement('div', { 
             key: 'overlay',
-            className: 'table-loading-overlay position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center',
+            className: 'table-loading-overlay position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center',
             style: { zIndex: 5 }
-        }),
+        }, [
+            React.createElement('div', { key: 'spinner', className: 'spinner-border text-primary mb-2', role: 'status', style: { width: '3rem', height: '3rem' } }),
+            React.createElement('div', { key: 'text', className: 'text-primary fw-bold small tracking-wider' }, 'UPDATING...')
+        ]),
         React.createElement('table', { className: 'table table-hover align-middle mb-0 table-modern' }, [
           React.createElement('thead', { key: 'thead' }, 
             React.createElement('tr', null, React.Children.toArray([
@@ -319,62 +318,15 @@ export default function Users({ showToast }) {
       ]),
 
       // Pagination Footer
-      React.createElement('div', { key: 'pagination', className: 'd-flex justify-content-between align-items-center mt-4 border-top pt-3' }, [
-          // Showing info
-          React.createElement('div', { key: 'info', className: 'text-muted small' }, 
-              `Showing ${indexOfFirstItem + 1} to ${Math.min(indexOfLastItem, totalUsers)} of ${totalUsers} entries`
-          ),
-          // Pagination Buttons
-          React.createElement('nav', { key: 'nav' }, 
-              React.createElement('ul', { className: 'pagination pagination-modern mb-0' }, [
-                  // First Page
-                  React.createElement('li', { key: 'first', className: `page-item ${currentPage === 1 ? 'disabled' : ''}` },
-                      React.createElement('button', { className: 'page-link', onClick: () => handlePageChange(1), title: 'First Page' }, 
-                          React.createElement('i', { className: 'fa-solid fa-angles-left' })
-                      )
-                  ),
-                  // Previous
-                  React.createElement('li', { key: 'prev', className: `page-item ${currentPage === 1 ? 'disabled' : ''}` },
-                      React.createElement('button', { className: 'page-link', onClick: () => handlePageChange(currentPage - 1), title: 'Previous' }, 
-                          React.createElement('i', { className: 'fa-solid fa-chevron-left' })
-                      )
-                  ),
-                  // Page Numbers
-                  ...(() => {
-                      const maxButtons = 7;
-                      let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
-                      let endPage = startPage + maxButtons - 1;
-
-                      if (endPage > totalPages) {
-                          endPage = totalPages;
-                          startPage = Math.max(1, endPage - maxButtons + 1);
-                      }
-                      
-                      const pages = [];
-                      for (let i = startPage; i <= endPage; i++) {
-                          pages.push(i);
-                      }
-                      return pages;
-                  })().map(page => {
-                        return React.createElement('li', { key: page, className: `page-item ${currentPage === page ? 'active' : ''}` },
-                            React.createElement('button', { className: 'page-link', onClick: () => handlePageChange(page) }, page)
-                        );
-                  }),
-                  // Next
-                  React.createElement('li', { key: 'next', className: `page-item ${currentPage === totalPages ? 'disabled' : ''}` },
-                      React.createElement('button', { className: 'page-link', onClick: () => handlePageChange(currentPage + 1), title: 'Next' }, 
-                          React.createElement('i', { className: 'fa-solid fa-chevron-right' })
-                      )
-                  ),
-                  // Last Page
-                  React.createElement('li', { key: 'last', className: `page-item ${currentPage === totalPages ? 'disabled' : ''}` },
-                      React.createElement('button', { className: 'page-link', onClick: () => handlePageChange(totalPages), title: 'Last Page' }, 
-                          React.createElement('i', { className: 'fa-solid fa-angles-right' })
-                      )
-                  )
-              ])
-          )
-      ]),
+      React.createElement(Pagination, {
+        key: 'pagination',
+        currentPage: currentPage,
+        totalPages: totalPages,
+        onPageChange: handlePageChange,
+        totalItems: totalUsers,
+        indexOfFirstItem: indexOfFirstItem,
+        indexOfLastItem: indexOfLastItem
+      }),
 
       // Modal Backdrop (Using Portal)
       (showModal || showDeleteModal) && ReactDOM.createPortal(

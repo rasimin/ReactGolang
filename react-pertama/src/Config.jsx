@@ -1,5 +1,7 @@
 const React = window.React;
 const ReactDOM = window.ReactDOM;
+import Pagination from './Pagination.jsx';
+import SearchInput from './SearchInput.jsx';
 import config from './config.js';
 const { useState, useEffect } = React;
 
@@ -235,19 +237,13 @@ export default function Config({ showToast }) {
         
         React.createElement('div', { key: 'actions', className: 'd-flex gap-3 align-items-center' }, [
             // Search Input
-            React.createElement('div', { className: 'search-container-modern' }, [
-                loading 
-                    ? React.createElement('div', { key: 'spinner', className: 'spinner-border text-primary spinner-border-sm me-2', role: 'status' })
-                    : React.createElement('i', { key: 'icon', className: 'fa-solid fa-magnifying-glass text-muted small' }),
-                React.createElement('input', { 
-                    key: 'input',
-                    type: 'text', 
-                    className: 'search-input-modern', 
-                    placeholder: 'Search configs...',
-                    value: searchQuery,
-                    onChange: (e) => setSearchQuery(e.target.value)
-                })
-            ]),
+            React.createElement(SearchInput, {
+              key: 'search',
+              value: searchQuery,
+              onChange: (e) => setSearchQuery(e.target.value),
+              placeholder: 'Search configs...',
+              isLoading: loading
+            }),
             
             // Type Filter
             React.createElement('select', {
@@ -350,62 +346,15 @@ export default function Config({ showToast }) {
       ]),
 
       // Pagination
-      React.createElement('div', { key: 'pagination', className: 'd-flex justify-content-between align-items-center mt-4 border-top pt-3' }, [
-          // Showing info
-          React.createElement('div', { key: 'info', className: 'text-muted small' }, 
-              `Showing ${Math.min(indexOfFirstItem + 1, totalConfigs)} to ${Math.min(indexOfLastItem, totalConfigs)} of ${totalConfigs} entries`
-          ),
-          // Pagination Buttons
-          React.createElement('nav', { key: 'nav' }, 
-              React.createElement('ul', { className: 'pagination pagination-modern mb-0' }, [
-                  // First Page
-                  React.createElement('li', { key: 'first', className: `page-item ${currentPage === 1 ? 'disabled' : ''}` },
-                      React.createElement('button', { className: 'page-link', onClick: () => handlePageChange(1), title: 'First Page' }, 
-                          React.createElement('i', { className: 'fa-solid fa-angles-left' })
-                      )
-                  ),
-                  // Previous
-                  React.createElement('li', { key: 'prev', className: `page-item ${currentPage === 1 ? 'disabled' : ''}` },
-                      React.createElement('button', { className: 'page-link', onClick: () => handlePageChange(Math.max(1, currentPage - 1)), title: 'Previous' }, 
-                          React.createElement('i', { className: 'fa-solid fa-chevron-left' })
-                      )
-                  ),
-                  // Page Numbers
-                  ...(() => {
-                      const maxButtons = 7;
-                      let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
-                      let endPage = startPage + maxButtons - 1;
-
-                      if (endPage > totalPages) {
-                          endPage = totalPages;
-                          startPage = Math.max(1, endPage - maxButtons + 1);
-                      }
-                      
-                      const pages = [];
-                      for (let i = startPage; i <= endPage; i++) {
-                          pages.push(i);
-                      }
-                      return pages;
-                  })().map(page => {
-                        return React.createElement('li', { key: page, className: `page-item ${currentPage === page ? 'active' : ''}` },
-                            React.createElement('button', { className: 'page-link', onClick: () => handlePageChange(page) }, page)
-                        );
-                  }),
-                  // Next
-                  React.createElement('li', { key: 'next', className: `page-item ${currentPage === totalPages || totalConfigs === 0 ? 'disabled' : ''}` },
-                      React.createElement('button', { className: 'page-link', onClick: () => handlePageChange(Math.min(totalPages, currentPage + 1)), title: 'Next' }, 
-                          React.createElement('i', { className: 'fa-solid fa-chevron-right' })
-                      )
-                  ),
-                  // Last Page
-                  React.createElement('li', { key: 'last', className: `page-item ${currentPage === totalPages || totalConfigs === 0 ? 'disabled' : ''}` },
-                      React.createElement('button', { className: 'page-link', onClick: () => handlePageChange(totalPages), title: 'Last Page' }, 
-                          React.createElement('i', { className: 'fa-solid fa-angles-right' })
-                      )
-                  )
-              ])
-          )
-      ]),
+      React.createElement(Pagination, {
+        key: 'pagination',
+        currentPage: currentPage,
+        totalPages: totalPages,
+        onPageChange: handlePageChange,
+        totalItems: totalConfigs,
+        indexOfFirstItem: indexOfFirstItem,
+        indexOfLastItem: indexOfLastItem
+      }),
 
       // Modals (Add/Edit + History)
       showModal && ReactDOM.createPortal(
