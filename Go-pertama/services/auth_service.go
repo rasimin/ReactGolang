@@ -1,6 +1,7 @@
 package services
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"go-pertama/config"
@@ -32,7 +33,10 @@ func NewAuthService(userRepo repository.UserRepository, cfg *config.Config) Auth
 func (s *authService) Login(req models.LoginRequest) (*models.LoginResponse, error) {
 	user, err := s.userRepo.GetByEmail(req.Email)
 	if err != nil {
-		return nil, errors.New("invalid credentials")
+		if err == sql.ErrNoRows {
+			return nil, errors.New("invalid credentials")
+		}
+		return nil, errors.New("database connection error")
 	}
 
 	if !user.IsActive {
@@ -78,7 +82,7 @@ func (s *authService) Login(req models.LoginRequest) (*models.LoginResponse, err
 		// Increment failed attempts
 		newAttempts := user.FailedLoginAttempts + 1
 		s.userRepo.UpdateFailedAttempts(user.ID, newAttempts)
-		
+
 		s.userRepo.LogActivity(req.Email, "LOGIN_FAILED", fmt.Sprintf("Wrong password. Attempt: %d", newAttempts))
 		return nil, errors.New("invalid credentials")
 	}

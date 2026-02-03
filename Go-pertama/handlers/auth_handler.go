@@ -32,7 +32,12 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.authService.Login(creds)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
+		statusCode := http.StatusUnauthorized
+		if err.Error() == "database connection error" {
+			statusCode = http.StatusInternalServerError
+		}
+
+		w.WriteHeader(statusCode)
 		json.NewEncoder(w).Encode(models.LoginResponse{
 			Message: err.Error(),
 			Success: false,

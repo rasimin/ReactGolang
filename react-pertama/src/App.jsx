@@ -519,6 +519,13 @@ function LoginPage({ onLogin, isDarkMode, toggleTheme }) {
         body: JSON.stringify({ email, password }),
       });
 
+      // Scenario 2: Database/Server Error
+      if (response.status === 500 || response.status === 503) {
+        setError('Cannot connect to Database. Please contact administrator.');
+        setIsLoading(false);
+        return;
+      }
+
       const data = await response.json();
 
       if (data.success) {
@@ -526,10 +533,12 @@ function LoginPage({ onLogin, isDarkMode, toggleTheme }) {
         localStorage.setItem('user', JSON.stringify(data.user));
         onLogin(data.user);
       } else {
+        // Scenario 3: Invalid Credentials (401) or other logic errors
         setError(data.message || 'Login failed');
       }
     } catch (err) {
-      setError('Network error. Please try again.');
+      // Scenario 1: Backend not reachable (Network Error)
+      setError('Cannot connect to Backend Server. Is it running?');
       console.error('Login error:', err);
     } finally {
       setIsLoading(false);

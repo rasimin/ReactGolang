@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -129,7 +130,10 @@ func initDB() {
 	}
 
 	// Verify connection
-	err = db.Ping()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err = db.PingContext(ctx)
 	if err != nil {
 		fmt.Printf("Warning: Could not connect to SQL Server: %s\n", err.Error())
 		fmt.Println("Please ensure SQL Server is running, TCP/IP is enabled, and the database exists.")
@@ -158,6 +162,7 @@ func seedRoles(db *gorm.DB) {
 }
 
 func initGorm() {
+	fmt.Println("initGorm: Starting...")
 	dsn := fmt.Sprintf("server=%s;user id=%s;password=%s;database=%s",
 		appConfig.Database.Host,
 		appConfig.Database.User,
@@ -169,24 +174,29 @@ func initGorm() {
 	}
 
 	var err error
+	fmt.Println("initGorm: Opening connection...")
 	gormDB, err = gorm.Open(sqlserver.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Printf("Warning: Could not connect to SQL Server via GORM: %v", err)
+		fmt.Printf("Warning: Could not connect to SQL Server via GORM: %v\n", err)
 		return
 	}
+	fmt.Println("initGorm: Connection opened.")
 
 	// Auto Migrate SystemConfig and Role
 	// Note: User migration is handled by manual SQL in migrateDB for now to preserve existing logic
+	fmt.Println("initGorm: AutoMigrating...")
 	err = gormDB.AutoMigrate(&models.SystemConfig{}, &models.SystemConfigHistory{}, &models.Role{})
 	if err != nil {
-		log.Printf("Warning: AutoMigrate failed: %v", err)
+		fmt.Printf("Warning: AutoMigrate failed: %v\n", err)
 	}
+	fmt.Println("initGorm: AutoMigrate done.")
 
 	seedRoles(gormDB)
 	seedConfigDB(gormDB)
 
 	// Sync User Roles (Update RoleID based on Role string)
 	gormDB.Exec("UPDATE Users SET RoleID = (SELECT id FROM roles WHERE roles.name = Users.Role) WHERE RoleID IS NULL OR RoleID = 0")
+	fmt.Println("initGorm: Finished.")
 }
 
 // seedConfigDB seeds the system_configs table with default values if empty
@@ -213,6 +223,12 @@ func seedConfigDB(db *gorm.DB) {
 }
 
 func main() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered from panic:", r)
+		}
+	}()
+
 	// Load configuration
 	var err error
 	appConfig, err = config.LoadConfig()
@@ -221,8 +237,11 @@ func main() {
 	}
 
 	// Initialize Database
+	fmt.Println("Initializing DB...")
 	initDB()
+	fmt.Println("Initializing GORM...")
 	initGorm()
+	fmt.Println("Initializing Repositories...")
 
 	// Initialize Repositories
 	userRepo := repository.NewUserRepository(db)
@@ -357,4 +376,5 @@ func main() {
 	if err := http.ListenAndServe(":"+port, mux); err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println("Server Exited")
 }
