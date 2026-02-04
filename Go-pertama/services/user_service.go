@@ -22,6 +22,7 @@ type UserService interface {
 	Delete(id int, deleterEmail string) error
 	UploadProfilePicture(email string, file multipart.File, header *multipart.FileHeader) (string, error)
 	GetProfile(email string) (*models.User, error)
+	ResetFailedAttempts(id int, updatedBy string) error
 }
 
 type userService struct {
@@ -30,6 +31,14 @@ type userService struct {
 
 func NewUserService(repo repository.UserRepository) UserService {
 	return &userService{repo: repo}
+}
+
+func (s *userService) ResetFailedAttempts(id int, updatedBy string) error {
+	err := s.repo.UpdateFailedAttempts(id, 0)
+	if err == nil {
+		s.repo.LogActivity(updatedBy, "RESET_FAILED_ATTEMPTS", fmt.Sprintf("Reset failed attempts for user ID %d", id))
+	}
+	return err
 }
 
 func (s *userService) GetProfile(email string) (*models.User, error) {

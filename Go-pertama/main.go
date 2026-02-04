@@ -284,6 +284,8 @@ func main() {
 		}
 	})))
 
+	mux.HandleFunc("/api/users/reset-counter", middleware.EnableCORS(middleware.AuthMiddleware(userHandler.ResetFailedAttempts)))
+
 	mux.HandleFunc("/upload", middleware.EnableCORS(middleware.AuthMiddleware(userHandler.UploadProfilePicture)))
 
 	// Change Log Route
