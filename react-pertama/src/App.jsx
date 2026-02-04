@@ -12,6 +12,7 @@ import Roles from '/src/Roles.jsx';
 import Workspaces from '/src/Workspaces.jsx';
 import Transactions from '/src/Transactions.jsx';
 import Documentation from '/src/Documentation.jsx';
+import UserSecurity from '/src/UserSecurity.jsx';
 
 // --- Components ---
 
@@ -31,6 +32,7 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
     { id: 'workspaces', label: 'Workspaces', icon: 'fa-solid fa-building' },
     { id: 'transactions', label: 'Transactions', icon: 'fa-solid fa-money-bill-transfer' },
     { id: 'users', label: 'Users', icon: 'fa-solid fa-users' },
+    { id: 'user-security', label: 'User Security', icon: 'fa-solid fa-user-lock' },
     { id: 'roles', label: 'Roles Access', icon: 'fa-solid fa-shield-halved' },
 
     { 
@@ -426,6 +428,10 @@ function DashboardContent({ activeMenu, showToast }) {
 
   if (activeMenu === 'users') {
     return React.createElement(Users, { showToast });
+  }
+
+  if (activeMenu === 'user-security') {
+    return React.createElement(UserSecurity, { showToast });
   }
 
   if (activeMenu === 'roles') {
