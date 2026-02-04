@@ -1,6 +1,7 @@
 const React = window.React;
 import Pagination from './Pagination.jsx';
 import SearchInput from './SearchInput.jsx';
+import CustomSelect from './CustomSelect.jsx';
 const { useState, useEffect } = React;
 
 export default function Transactions({ showToast }) {
@@ -83,15 +84,19 @@ export default function Transactions({ showToast }) {
           placeholder: 'Search ref or desc...',
           isLoading: loading
         }),
-        React.createElement('select', {
+        React.createElement(CustomSelect, {
           key: 'ws-filter',
-          className: 'form-select form-select-modern w-auto',
+          className: 'w-auto',
+          style: { minWidth: '150px' },
           value: workspaceFilter,
-          onChange: (e) => setWorkspaceFilter(e.target.value)
-        }, [
-          React.createElement('option', { value: 'all' }, 'All Clients'),
-          ...workspaces.map(ws => React.createElement('option', { key: ws.id, value: ws.id }, ws.name))
-        ])
+          compact: true,
+          options: [
+            { value: 'all', label: 'All Clients' },
+            ...workspaces.map(ws => ({ value: ws.id, label: ws.name }))
+          ],
+          placeholder: 'All Clients',
+          onChange: (val) => setWorkspaceFilter(val)
+        })
       ])
     ]),
 

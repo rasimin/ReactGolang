@@ -3,6 +3,7 @@ const ReactDOM = window.ReactDOM; // Add ReactDOM
 import Pagination from './Pagination.jsx';
 import SearchInput from './SearchInput.jsx';
 import config from './config.js';
+import CustomSelect from './CustomSelect.jsx';
 const { useState, useEffect } = React;
 
 export default function Users({ showToast }) {
@@ -369,11 +370,13 @@ export default function Users({ showToast }) {
                   React.createElement('div', { key: 'row', className: 'row' }, [
                       React.createElement('div', { key: 'role-col', className: 'col-md-6 mb-3' }, [
                                     React.createElement('label', { className: 'form-label small fw-bold text-muted' }, 'Role'),
-                            React.createElement('select', { 
-                                className: 'form-select-modern w-100', 
-                                value: currentUser.roleId || '', 
-                                onChange: e => {
-                                    const selectedId = parseInt(e.target.value);
+                            React.createElement(CustomSelect, {
+                                className: 'w-100',
+                                value: currentUser.roleId || '',
+                                options: roles.map(role => ({ value: role.id, label: role.name })),
+                                placeholder: 'Select Role',
+                                onChange: (newVal) => {
+                                    const selectedId = parseInt(newVal);
                                     const selectedRole = roles.find(r => r.id === selectedId);
                                     setCurrentUser({
                                         ...currentUser, 
@@ -381,12 +384,7 @@ export default function Users({ showToast }) {
                                         role: selectedRole ? selectedRole.name : '' 
                                     });
                                 }
-                            }, [
-                                React.createElement('option', { key: 'default', value: '' }, 'Select Role'),
-                                ...roles.map(role => 
-                                    React.createElement('option', { key: role.id, value: role.id }, role.name)
-                                )
-                            ])
+                            })
                                 ]),
                       React.createElement('div', { key: 'status-col', className: 'col-md-6 mb-3' }, [
                                   React.createElement('label', { className: 'form-label small fw-bold text-muted' }, 'Status'),

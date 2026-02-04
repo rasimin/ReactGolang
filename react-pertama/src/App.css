@@ -204,21 +204,31 @@ body.dark .glass-card {
   background: #f8fafc;
   border: 1px solid #cbd5e1;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  padding: 0.75rem 1rem;
-  border-radius: 0.75rem; /* Lebih rounded */
-  transition: all 0.3s ease;
+  padding: 0.85rem 1.2rem;
+  border-radius: 1rem;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.95rem;
+  color: var(--text-main);
+}
+
+.form-control-modern:hover {
+  background: #ffffff;
+  border-color: #94a3b8;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
 .form-control-modern:focus {
   background: #ffffff;
   border-color: #6366f1;
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15), 0 4px 12px rgba(99, 102, 241, 0.1);
+  outline: none;
 }
 
 body.dark .form-control-modern {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(8px);
   border-color: rgba(255, 255, 255, 0.1);
-  color: white !important;
+  color: #e2e8f0 !important;
 }
 
 body.dark .form-control-modern::placeholder {
@@ -226,50 +236,59 @@ body.dark .form-control-modern::placeholder {
 }
 
 body.dark .form-control-modern:focus {
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(30, 41, 59, 1);
   border-color: #818cf8;
-  color: white !important;
 }
 
 .form-select-modern {
   background-color: #f8fafc;
   border: 1px solid #cbd5e1;
-  padding: 0.75rem 1rem;
-  padding-right: 2.5rem; /* Space for icon */
-  border-radius: 0.75rem; /* Konsisten dengan form control */
-  transition: all 0.3s ease;
+  padding: 0.85rem 1.2rem;
+  padding-right: 3rem; /* Space for icon */
+  border-radius: 1rem;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
-  background-position: right 1rem center;
-  background-size: 16px 12px;
+  background-position: right 1.2rem center;
+  background-size: 1.2rem;
   cursor: pointer;
+  font-size: 0.95rem;
+  color: var(--text-main);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.form-select-modern:hover {
+  border-color: #94a3b8;
+  background-color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
 .form-select-modern:focus {
   background-color: #ffffff;
   border-color: #6366f1;
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15), 0 4px 12px rgba(99, 102, 241, 0.1);
   outline: none;
 }
 
 body.dark .form-select-modern {
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: rgba(30, 41, 59, 0.7);
   border-color: rgba(255, 255, 255, 0.1);
-  color: white !important;
-  /* Lighter chevron for dark mode */
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+  color: #e2e8f0 !important;
+  backdrop-filter: blur(8px);
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
 }
 
 body.dark .form-select-modern option {
-    background-color: #1e293b; /* Dark bg for options dropdown */
+    background-color: #1e293b;
     color: white;
+    padding: 10px;
 }
 
 body.dark .form-select-modern:focus {
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: rgba(30, 41, 59, 1);
   border-color: #818cf8;
 }
 
@@ -284,6 +303,95 @@ body.dark .form-select-modern:focus {
 .btn-primary-modern:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+/* --- Modern Checkbox, Radio & Switch --- */
+.form-check {
+  padding-left: 2rem; /* Increase default left padding for better spacing */
+  margin-bottom: 0.5rem;
+}
+
+.form-check-input {
+  width: 1.3em;
+  height: 1.3em;
+  margin-top: 0.15em;
+  margin-left: -2rem; /* Pull back to fit the new padding */
+  border: 2px solid #cbd5e1;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  background-color: #f8fafc;
+  float: left; /* Ensure Bootstrap behavior */
+}
+
+.form-check-label {
+  padding-left: 0.5rem; /* Add spacing between input and text */
+  cursor: pointer;
+  vertical-align: middle;
+  line-height: 1.5;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.form-check-input:checked {
+  background-color: #6366f1;
+  border-color: #6366f1;
+  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+  transform: scale(1.05);
+}
+
+.form-check-input:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+  outline: none;
+}
+
+/* Radio Specific */
+.form-check-input[type="radio"] {
+  border-radius: 50%;
+}
+
+/* Switch Specific - Larger & Smoother */
+.form-switch {
+  padding-left: 4rem; /* More space for the large switch */
+}
+
+.form-switch .form-check-input {
+  width: 3.2em;
+  height: 1.7em;
+  margin-left: -4rem; /* Pull back */
+  border-radius: 2em;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23cbd5e1'/%3e%3c/svg%3e");
+  background-position: left center;
+  transition: background-position 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-switch .form-check-input:checked {
+  background-position: right center;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
+}
+
+/* Dark Mode Support */
+body.dark .form-check-input {
+  background-color: rgba(30, 41, 59, 0.5);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+body.dark .form-check-label {
+  color: #e2e8f0;
+}
+
+body.dark .form-switch .form-check-input {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%2364748b'/%3e%3c/svg%3e");
+}
+
+body.dark .form-check-input:checked {
+  background-color: #6366f1;
+  border-color: #6366f1;
+}
+
+body.dark .form-switch .form-check-input:checked {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
 }
 
 /* --- Search & Actions Modern Styling --- */
@@ -776,6 +884,136 @@ body.dark .table-modern thead th {
 
 body.dark .pagination-modern .page-link {
   color: var(--text-muted);
+}
+
+/* Custom Select Styles */
+.custom-select-container {
+  position: relative;
+  width: 100%;
+}
+
+.custom-select-trigger {
+  cursor: pointer;
+  background-image: none !important; /* Remove default SVG chevron */
+  padding-right: 1.2rem; /* Reset padding since we don't need space for bg image */
+}
+
+.form-select-modern.compact {
+  border-radius: 50px;
+  padding: 0.4rem 1rem;
+  background-color: var(--bg-body);
+  border-color: var(--border-color);
+  font-size: 0.9rem;
+  min-height: 38px; /* Match search input typical height */
+}
+
+.form-select-modern.compact:hover {
+    border-color: #6366f1;
+}
+
+body.dark .form-select-modern.compact {
+    background-color: var(--bg-body);
+    border-color: var(--border-color);
+}
+
+.custom-select-arrow {
+  transition: transform 0.3s ease;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.custom-select-trigger.open .custom-select-arrow {
+  transform: rotate(180deg);
+}
+
+.custom-select-options {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  min-width: 100%;
+  width: max-content; /* Allow width to grow with content */
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 1050;
+  max-height: 300px; /* Increase height */
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+/* Slim Scrollbar for Dropdown */
+.custom-select-options::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-select-options::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-select-options::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 20px;
+}
+
+body.dark .custom-select-options::-webkit-scrollbar-thumb {
+  background-color: #475569;
+}
+
+.custom-select-option {
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text-main);
+  white-space: nowrap; /* Prevent text wrapping */
+}
+
+.custom-select-option:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.custom-select-option.selected {
+  background-color: #eff6ff;
+  color: #3b82f6;
+  font-weight: 500;
+}
+
+/* Dark Mode Support */
+body.dark .custom-select-options {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark .custom-select-option:hover {
+  background-color: #334155;
+  color: white;
+}
+
+body.dark .custom-select-option.selected {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+body.dark .custom-select-arrow {
+  color: #94a3b8;
+}
+
+/* Animation */
+@keyframes dropdownSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-dropdown {
+  animation: dropdownSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 body.dark .pagination-modern .page-link:hover {

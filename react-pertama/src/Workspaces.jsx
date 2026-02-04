@@ -1,6 +1,7 @@
 const React = window.React;
 import Pagination from './Pagination.jsx';
 import SearchInput from './SearchInput.jsx';
+import CustomSelect from './CustomSelect.jsx';
 const { useState, useEffect } = React;
 
 export default function Workspaces({ showToast }) {
@@ -144,16 +145,20 @@ export default function Workspaces({ showToast }) {
           placeholder: 'Search workspaces...',
           isLoading: loading
         }),
-        React.createElement('select', {
+        React.createElement(CustomSelect, {
           key: 'status-filter',
-          className: 'form-select form-select-modern w-auto',
+          className: 'w-auto',
+          style: { minWidth: '140px' },
           value: statusFilter,
-          onChange: (e) => setStatusFilter(e.target.value)
-        }, [
-          React.createElement('option', { value: 'all' }, 'All Status'),
-          React.createElement('option', { value: 'active' }, 'Active'),
-          React.createElement('option', { value: 'inactive' }, 'Inactive')
-        ]),
+          compact: true,
+          options: [
+            { value: 'all', label: 'All Status' },
+            { value: 'active', label: 'Active' },
+            { value: 'inactive', label: 'Inactive' }
+          ],
+          placeholder: 'All Status',
+          onChange: (val) => setStatusFilter(val)
+        }),
         React.createElement('button', { className: 'btn-add-modern', onClick: openAddModal }, [
           React.createElement('i', { key: 'icon', className: 'fa-solid fa-plus' }),
           'Add Workspace'
@@ -286,15 +291,17 @@ export default function Workspaces({ showToast }) {
                 ]),
                 React.createElement('div', { className: 'col-md-6 mb-3' }, [
                   React.createElement('label', { className: 'form-label small fw-bold text-muted' }, 'Status'),
-                  React.createElement('select', { 
-                    className: 'form-select form-select-modern',
+                React.createElement(CustomSelect, {
+                    className: 'w-100',
                     value: currentWorkspace.status,
-                    onChange: (e) => setCurrentWorkspace({ ...currentWorkspace, status: e.target.value })
-                  }, [
-                    React.createElement('option', { value: 'active' }, 'Active'),
-                    React.createElement('option', { value: 'inactive' }, 'Inactive')
-                  ])
-                ])
+                    options: [
+                        { value: 'active', label: 'Active' },
+                        { value: 'inactive', label: 'Inactive' }
+                    ],
+                    placeholder: 'Select Status',
+                    onChange: (val) => setCurrentWorkspace({ ...currentWorkspace, status: val })
+                })
+              ])
               ]),
               React.createElement('div', { className: 'mb-3' }, [
                 React.createElement('label', { className: 'form-label small fw-bold text-muted' }, 'Description'),

@@ -2,6 +2,7 @@ const React = window.React;
 const ReactDOM = window.ReactDOM;
 import Pagination from './Pagination.jsx';
 import SearchInput from './SearchInput.jsx';
+import CustomSelect from './CustomSelect.jsx';
 import config from './config.js';
 const { useState, useEffect } = React;
 
@@ -246,20 +247,23 @@ export default function Config({ showToast }) {
             }),
             
             // Type Filter
-            React.createElement('select', {
+            React.createElement(CustomSelect, {
                   key: 'type-filter',
-                  className: 'form-select-modern',
-                  style: { width: 'auto', minWidth: '120px' },
+                  className: 'w-auto',
+                  style: { minWidth: '140px' },
                   value: typeFilter,
-                  onChange: (e) => setTypeFilter(e.target.value)
-              }, [
-                  React.createElement('option', { key: 'all', value: '' }, 'All Types'),
-                  React.createElement('option', { key: 'str', value: 'string' }, 'String'),
-                  React.createElement('option', { key: 'int', value: 'integer' }, 'Integer'),
-                  React.createElement('option', { key: 'bool', value: 'boolean' }, 'Boolean'),
-                  React.createElement('option', { key: 'float', value: 'float' }, 'Float'),
-                  React.createElement('option', { key: 'json', value: 'json' }, 'JSON')
-              ]),
+                  compact: true,
+                  options: [
+                      { value: '', label: 'All Types' },
+                      { value: 'string', label: 'String' },
+                      { value: 'integer', label: 'Integer' },
+                      { value: 'boolean', label: 'Boolean' },
+                      { value: 'float', label: 'Float' },
+                      { value: 'json', label: 'JSON' }
+                  ],
+                  placeholder: 'All Types',
+                  onChange: (val) => setTypeFilter(val)
+              }),
 
             // Add Button
             React.createElement('button', { 
@@ -380,19 +384,21 @@ export default function Config({ showToast }) {
                               ]),
                               React.createElement('div', { key: 'type-grp', className: 'col-md-6' }, [
                                   React.createElement('label', { key: 'label', className: 'form-label small fw-bold text-muted' }, 'Data Type'),
-                                  React.createElement('select', {
+                                  React.createElement(CustomSelect, {
                                       key: 'select',
-                                      className: 'form-select form-select-modern',
+                                      className: 'w-100',
                                       value: currentConfig.dataType,
-                                      onChange: (e) => setCurrentConfig({...currentConfig, dataType: e.target.value, mainValue: ''}),
+                                      options: [
+                                          { value: 'string', label: 'String' },
+                                          { value: 'integer', label: 'Integer' },
+                                          { value: 'boolean', label: 'Boolean' },
+                                          { value: 'float', label: 'Float' },
+                                          { value: 'json', label: 'JSON' }
+                                      ],
+                                      placeholder: 'Select Type',
+                                      onChange: (val) => setCurrentConfig({...currentConfig, dataType: val, mainValue: ''}),
                                       disabled: modalMode === 'edit'
-                                  }, [
-                                      React.createElement('option', { key: 'str', value: 'string' }, 'String'),
-                                      React.createElement('option', { key: 'int', value: 'integer' }, 'Integer'),
-                                      React.createElement('option', { key: 'bool', value: 'boolean' }, 'Boolean'),
-                                      React.createElement('option', { key: 'float', value: 'float' }, 'Float'),
-                                      React.createElement('option', { key: 'json', value: 'json' }, 'JSON')
-                                  ])
+                                  })
                               ]),
                               React.createElement('div', { key: 'val-grp', className: 'col-12' }, renderInput()),
                               React.createElement('div', { key: 'desc-grp', className: 'col-12' }, [
