@@ -196,7 +196,7 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
   ]);
 }
 
-function Header({ title, onLogout, isDarkMode, toggleTheme, toggleSidebar, setActiveMenu, togglePasswordModal }) {
+function Header({ title, onLogout, isDarkMode, toggleTheme, toggleSidebar, setActiveMenu, togglePasswordModal, user }) {
   // Dummy Notification Data
   const notifications = [
     { id: 1, title: 'New Order #1023', time: '5m ago', icon: 'fa-box', color: 'primary', unread: true },
@@ -318,15 +318,20 @@ function Header({ title, onLogout, isDarkMode, toggleTheme, toggleSidebar, setAc
               'aria-expanded': 'false'
             }, [
               React.createElement('div', { key: 'info', className: 'd-none d-md-block text-end me-2' }, [
-                React.createElement('div', { key: 'name', className: 'fw-bold small' }, 'Admin User'),
-                React.createElement('div', { key: 'role', className: 'text-muted small', style: { fontSize: '0.7rem' } }, 'Super Admin')
+                React.createElement('div', { key: 'name', className: 'fw-bold small' }, user?.name || 'User'),
+                React.createElement('div', { key: 'role', className: 'text-muted small', style: { fontSize: '0.7rem' } }, user?.role || 'Member')
               ]),
               React.createElement('img', {
                 key: 'img',
-                src: 'https://ui-avatars.com/api/?name=Admin+User&background=random&color=fff',
+                src: user?.avatarType 
+                    ? `${config.api.baseUrl}/api/avatar?id=${user.id}&t=${new Date().getTime()}` 
+                    : (user?.profilePicture 
+                        ? `${config.api.baseUrl}/uploads/${user.profilePicture}` 
+                        : `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&background=random&color=fff`),
                 className: 'rounded-circle shadow-sm',
                 width: '40',
                 height: '40',
+                style: { objectFit: 'cover' },
                 alt: 'User'
               })
             ]),
@@ -401,7 +406,7 @@ function DashboardStats() {
   );
 }
 
-function DashboardContent({ activeMenu, showToast }) {
+function DashboardContent({ activeMenu, showToast, updateUser }) {
   if (activeMenu === 'dashboard') {
     return React.createElement('div', { className: 'p-4' }, [
       React.createElement(DashboardStats, { key: 'stats' }),
@@ -445,14 +450,14 @@ function DashboardContent({ activeMenu, showToast }) {
 
   if (activeMenu === 'changelog') return React.createElement(ChangeLog, { showToast });
 
-  if (activeMenu === 'profile') return React.createElement(Profile, { showToast });
+  if (activeMenu === 'profile') return React.createElement(Profile, { showToast, onProfileUpdate: updateUser });
 
   if (activeMenu === 'docs') return React.createElement(Documentation, { showToast });
   
   return null;
 }
 
-function DashboardLayout({ onLogout, isDarkMode, toggleTheme, togglePasswordModal, showToast }) {
+function DashboardLayout({ onLogout, isDarkMode, toggleTheme, togglePasswordModal, showToast, user, updateUser }) {
   // Initialize from localStorage to persist state across refreshes
   const [activeMenu, setActiveMenu] = useState(() => {
     return localStorage.getItem('activeMenu') || 'dashboard';
@@ -487,14 +492,15 @@ function DashboardLayout({ onLogout, isDarkMode, toggleTheme, togglePasswordModa
         toggleTheme: toggleTheme,
         toggleSidebar: toggleSidebar,
         setActiveMenu: setActiveMenu,
-        togglePasswordModal: togglePasswordModal
+        togglePasswordModal: togglePasswordModal,
+        user: user
       }),
       React.createElement('main', { 
         key: 'main', 
         className: 'flex-grow-1 overflow-auto custom-scrollbar', 
         style: { marginTop: '0' } 
       }, 
-        React.createElement(DashboardContent, { activeMenu: activeMenu, showToast: showToast })
+        React.createElement(DashboardContent, { activeMenu: activeMenu, showToast: showToast, updateUser: updateUser })
       )
     ])
   ]);
@@ -632,6 +638,7 @@ function LoadingScreen() {
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -663,8 +670,10 @@ function App() {
     // Simulate a brief loading check for better UX
     setTimeout(() => {
       const token = localStorage.getItem('token');
+      const savedUser = localStorage.getItem('user');
       if (token) {
         setIsLoggedIn(true);
+        if (savedUser) setUser(JSON.parse(savedUser));
       }
       setIsLoading(false);
     }, 800); // 0.8s delay for smooth animation
@@ -687,6 +696,7 @@ function App() {
 
   const handleLogin = (user) => {
     setIsLoggedIn(true);
+    setUser(user);
   };
 
   const handleLogout = async () => {
@@ -707,6 +717,7 @@ function App() {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       setIsLoggedIn(false);
+      setUser(null);
       
       // Small delay to show the loading screen briefly before showing login
       setTimeout(() => {
@@ -734,7 +745,9 @@ function App() {
       isDarkMode: isDarkMode,
       toggleTheme: toggleTheme,
       togglePasswordModal: togglePasswordModal,
-      showToast: showToast
+      showToast: showToast,
+      user: user,
+      updateUser: setUser
     }),
     React.createElement(ChangePassword, { 
       key: 'pw-modal',

@@ -26,6 +26,8 @@ type User struct {
 	RoleDetails         *Role      `json:"roleDetails,omitempty"`
 	IsActive            bool       `json:"isActive"`
 	ProfilePicture      string     `json:"profilePicture"`
+	Avatar              []byte     `json:"-"`          // Binary data for avatar
+	AvatarType          string     `json:"avatarType"` // MIME type (e.g., image/png)
 	LastLogin           *time.Time `json:"lastLogin"`
 	LastLogout          *time.Time `json:"lastLogout"`
 	FailedLoginAttempts int        `json:"failedLoginAttempts"`

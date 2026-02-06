@@ -7,10 +7,6 @@ import (
 	"go-pertama/repository"
 	"io"
 	"mime/multipart"
-	"os"
-	"path/filepath"
-	"strings"
-	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -20,7 +16,10 @@ type UserService interface {
 	Create(req models.CreateUserRequest, creatorEmail string) error
 	Update(req models.UpdateUserRequest, updaterEmail string) error
 	Delete(id int, deleterEmail string) error
-	UploadProfilePicture(email string, file multipart.File, header *multipart.FileHeader) (string, error)
+	UploadProfilePicture(email string, file multipart.File, header *multipart.FileHeader) error
+	GetAvatar(email string) ([]byte, string, error)
+	GetAvatarByID(id int) ([]byte, string, error)
+	RemoveAvatar(email string) error
 	GetProfile(email string) (*models.User, error)
 	ResetFailedAttempts(id int, updatedBy string) error
 }
@@ -131,37 +130,36 @@ func (s *userService) Delete(id int, deleterEmail string) error {
 	return err
 }
 
-func (s *userService) UploadProfilePicture(email string, file multipart.File, header *multipart.FileHeader) (string, error) {
-	// Create unique filename
-	filename := fmt.Sprintf("%d-%s", time.Now().Unix(), header.Filename)
-	filename = strings.ReplaceAll(filename, " ", "_")
-
-	// Ensure absolute path
-	cwd, _ := os.Getwd()
-	uploadDir := filepath.Join(cwd, "uploads")
-	if _, err := os.Stat(uploadDir); os.IsNotExist(err) {
-		os.Mkdir(uploadDir, 0755)
-	}
-
-	uploadPath := filepath.Join(uploadDir, filename)
-
-	// Create destination file
-	dst, err := os.Create(uploadPath)
+func (s *userService) UploadProfilePicture(email string, file multipart.File, header *multipart.FileHeader) error {
+	// Read file content
+	fileBytes, err := io.ReadAll(file)
 	if err != nil {
-		return "", err
+		return err
 	}
-	defer dst.Close()
 
-	// Copy content
-	if _, err := io.Copy(dst, file); err != nil {
-		return "", err
+	// Determine content type
+	contentType := header.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "application/octet-stream"
 	}
 
 	// Update DB
-	err = s.repo.UpdateProfilePicture(email, filename)
+	err = s.repo.UpdateAvatar(email, fileBytes, contentType)
 	if err == nil {
-		s.repo.LogActivity(email, "UPLOAD_PICTURE", "Uploaded "+filename)
+		s.repo.LogActivity(email, "UPLOAD_AVATAR", "Uploaded avatar ("+contentType+")")
 	}
 
-	return filename, err
+	return err
+}
+
+func (s *userService) GetAvatar(email string) ([]byte, string, error) {
+	return s.repo.GetAvatar(email)
+}
+
+func (s *userService) GetAvatarByID(id int) ([]byte, string, error) {
+	return s.repo.GetAvatarByID(id)
+}
+
+func (s *userService) RemoveAvatar(email string) error {
+	return s.repo.RemoveAvatar(email)
 }

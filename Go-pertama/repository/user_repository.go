@@ -20,6 +20,10 @@ type UserRepository interface {
 	UpdateLastLogout(email string) error
 	UpdateFailedAttempts(id int, attempts int) error
 	UpdateProfilePicture(email string, filename string) error
+	UpdateAvatar(email string, avatar []byte, avatarType string) error
+	GetAvatar(email string) ([]byte, string, error)
+	GetAvatarByID(id int) ([]byte, string, error)
+	RemoveAvatar(email string) error
 	EmailExists(email string) (bool, error)
 	LogActivity(email, action, details string)
 }
@@ -35,15 +39,16 @@ func NewUserRepository(db *sql.DB) UserRepository {
 func (r *userRepository) GetByEmail(email string) (*models.User, error) {
 	var u models.User
 	var pp sql.NullString
+	var avatarType sql.NullString
 	var lastLogin, lastLogout sql.NullTime
 	var roleID sql.NullInt64
 
-	query := `SELECT u.ID, u.Email, u.Password, u.Name, COALESCE(r.Name, u.Role), u.RoleID, u.IsActive, u.ProfilePicture, u.LastLogin, u.LastLogout, u.FailedLoginAttempts 
+	query := `SELECT u.ID, u.Email, u.Password, u.Name, COALESCE(r.Name, u.Role), u.RoleID, u.IsActive, u.ProfilePicture, u.AvatarType, u.LastLogin, u.LastLogout, u.FailedLoginAttempts 
 			  FROM Users u 
 			  LEFT JOIN Roles r ON u.RoleID = r.ID 
 			  WHERE u.Email = @p1`
 	err := r.db.QueryRow(query, email).Scan(
-		&u.ID, &u.Email, &u.Password, &u.Name, &u.Role, &roleID, &u.IsActive, &pp, &lastLogin, &lastLogout, &u.FailedLoginAttempts,
+		&u.ID, &u.Email, &u.Password, &u.Name, &u.Role, &roleID, &u.IsActive, &pp, &avatarType, &lastLogin, &lastLogout, &u.FailedLoginAttempts,
 	)
 	if err != nil {
 		return nil, err
@@ -54,6 +59,9 @@ func (r *userRepository) GetByEmail(email string) (*models.User, error) {
 	}
 	if pp.Valid {
 		u.ProfilePicture = pp.String
+	}
+	if avatarType.Valid {
+		u.AvatarType = avatarType.String
 	}
 	if lastLogin.Valid {
 		u.LastLogin = &lastLogin.Time
@@ -225,6 +233,37 @@ func (r *userRepository) UpdateFailedAttempts(id int, attempts int) error {
 
 func (r *userRepository) UpdateProfilePicture(email string, filename string) error {
 	_, err := r.db.Exec("UPDATE Users SET ProfilePicture = @p1, UpdatedAt = GETDATE() WHERE Email = @p2", filename, email)
+	return err
+}
+
+func (r *userRepository) UpdateAvatar(email string, avatar []byte, avatarType string) error {
+	// Clear ProfilePicture (filename) when setting Avatar to avoid confusion
+	_, err := r.db.Exec("UPDATE Users SET Avatar = @p1, AvatarType = @p2, ProfilePicture = '', UpdatedAt = GETDATE() WHERE Email = @p3", avatar, avatarType, email)
+	return err
+}
+
+func (r *userRepository) GetAvatar(email string) ([]byte, string, error) {
+	var avatar []byte
+	var avatarType sql.NullString
+	err := r.db.QueryRow("SELECT Avatar, AvatarType FROM Users WHERE Email = @p1", email).Scan(&avatar, &avatarType)
+	if err != nil {
+		return nil, "", err
+	}
+	return avatar, avatarType.String, nil
+}
+
+func (r *userRepository) GetAvatarByID(id int) ([]byte, string, error) {
+	var avatar []byte
+	var avatarType sql.NullString
+	err := r.db.QueryRow("SELECT Avatar, AvatarType FROM Users WHERE ID = @p1", id).Scan(&avatar, &avatarType)
+	if err != nil {
+		return nil, "", err
+	}
+	return avatar, avatarType.String, nil
+}
+
+func (r *userRepository) RemoveAvatar(email string) error {
+	_, err := r.db.Exec("UPDATE Users SET Avatar = NULL, AvatarType = NULL WHERE Email = @p1", email)
 	return err
 }
 

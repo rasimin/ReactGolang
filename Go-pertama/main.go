@@ -47,6 +47,10 @@ func migrateDB() {
 		 ALTER TABLE Users ADD Role VARCHAR(50) DEFAULT 'user' WITH VALUES;`,
 		`IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'RoleID' AND Object_ID = Object_ID(N'Users'))
 		 ALTER TABLE Users ADD RoleID BIGINT NULL;`,
+		`IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'Avatar' AND Object_ID = Object_ID(N'Users'))
+		 ALTER TABLE Users ADD Avatar VARBINARY(MAX) NULL;`,
+		`IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'AvatarType' AND Object_ID = Object_ID(N'Users'))
+		 ALTER TABLE Users ADD AvatarType NVARCHAR(50) NULL;`,
 	}
 
 	for _, q := range queries {
@@ -287,6 +291,8 @@ func main() {
 	mux.HandleFunc("/api/users/reset-counter", middleware.EnableCORS(middleware.AuthMiddleware(userHandler.ResetFailedAttempts)))
 
 	mux.HandleFunc("/upload", middleware.EnableCORS(middleware.AuthMiddleware(userHandler.UploadProfilePicture)))
+	mux.HandleFunc("/api/avatar/remove", middleware.EnableCORS(middleware.AuthMiddleware(userHandler.RemoveAvatar)))
+	mux.HandleFunc("/api/avatar", middleware.EnableCORS(userHandler.GetAvatar))
 
 	// Change Log Route
 	mux.HandleFunc("/api/changelog", middleware.EnableCORS(middleware.AuthMiddleware(changeLogHandler.GetChangeLog)))

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"go-pertama/models"
 	"go-pertama/services"
@@ -154,16 +155,92 @@ func (h *UserHandler) UploadProfilePicture(w http.ResponseWriter, r *http.Reques
 	defer file.Close()
 
 	email := r.Header.Get("X-User-Email")
-	filename, err := h.userService.UploadProfilePicture(email, file, header)
+	err = h.userService.UploadProfilePicture(email, file, header)
 	if err != nil {
-		http.Error(w, "Error saving file: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error saving avatar: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"message":  "File uploaded successfully",
-		"filename": filename,
+		"message": "Avatar uploaded successfully",
+	})
+}
+
+func (h *UserHandler) GetAvatar(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var avatar []byte
+	var contentType string
+	var err error
+
+	idStr := r.URL.Query().Get("id")
+	if idStr != "" {
+		// Fetch by ID (public or protected? For now public via ID)
+		id, errConv := strconv.Atoi(idStr)
+		if errConv != nil {
+			http.Error(w, "Invalid ID", http.StatusBadRequest)
+			return
+		}
+		avatar, contentType, err = h.userService.GetAvatarByID(id)
+	} else {
+		// Fetch by Token (authenticated user)
+		email := r.Header.Get("X-User-Email")
+		if email == "" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		avatar, contentType, err = h.userService.GetAvatar(email)
+	}
+
+	if err != nil {
+		// If not found, return 404
+		if err == sql.ErrNoRows {
+			http.Error(w, "Avatar not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Error retrieving avatar: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if len(avatar) == 0 {
+		http.Error(w, "Avatar empty", http.StatusNotFound)
+		return
+	}
+
+	if contentType == "" {
+		contentType = "image/jpeg" // Default
+	}
+
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Cache-Control", "public, max-age=86400") // Cache for 1 day
+	w.Write(avatar)
+}
+
+func (h *UserHandler) RemoveAvatar(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost && r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	email := r.Header.Get("X-User-Email")
+	if email == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	err := h.userService.RemoveAvatar(email)
+	if err != nil {
+		http.Error(w, "Error removing avatar: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Avatar removed successfully",
 	})
 }
 
