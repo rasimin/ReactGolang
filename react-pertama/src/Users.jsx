@@ -269,6 +269,7 @@ export default function Users({ showToast }) {
               React.createElement('th', { key: 'email' }, 'Email'),
               React.createElement('th', { key: 'role' }, 'Role'),
               React.createElement('th', { key: 'status' }, 'Status'),
+              React.createElement('th', { key: 'failed' }, 'Failed Attempts'),
               React.createElement('th', { key: 'actions', className: 'text-end' }, 'Actions'),
             ]))
           ),
@@ -297,6 +298,12 @@ export default function Users({ showToast }) {
                         user.isActive 
                             ? React.createElement('span', { className: 'badge bg-success bg-opacity-10 text-success' }, 'Active')
                             : React.createElement('span', { className: 'badge bg-danger bg-opacity-10 text-danger' }, 'Inactive')
+                    ),
+                    // Failed Attempts
+                    React.createElement('td', { key: 'failed', className: 'text-center' }, 
+                        user.failedLoginAttempts > 0 
+                            ? React.createElement('span', { className: `badge ${user.failedLoginAttempts >= 3 ? 'bg-danger' : 'bg-warning text-dark'}` }, user.failedLoginAttempts)
+                            : React.createElement('span', { className: 'text-muted small' }, '-')
                     ),
                     // Actions
                     React.createElement('td', { key: 'actions', className: 'text-end' }, React.Children.toArray([

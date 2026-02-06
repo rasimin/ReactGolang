@@ -1,5 +1,5 @@
 const React = window.React;
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef, useCallback } = React;
 import config from './config.js';
 
 function Profile({ showToast, onProfileUpdate }) {
@@ -7,6 +7,72 @@ function Profile({ showToast, onProfileUpdate }) {
     const [loading, setLoading] = useState(true);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    // Activity Log State
+    const [activityLogs, setActivityLogs] = useState([]);
+    const [hasMoreLogs, setHasMoreLogs] = useState(true);
+    const [loadingLogs, setLoadingLogs] = useState(false);
+    
+    // Observer ref to persist across renders
+    const observer = useRef();
+
+    // Fetch Logs Function - Wrapped in useCallback
+    const fetchLogs = useCallback(async (offset) => {
+        if (loadingLogs) return;
+        setLoadingLogs(true);
+        
+        try {
+            const response = await fetch(`${config.api.baseUrl}/api/profile/activity?limit=10&offset=${offset}`, {
+                headers: {
+                    'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                const newLogs = data.data || [];
+                
+                if (offset === 0) {
+                    setActivityLogs(newLogs);
+                } else {
+                    setActivityLogs(prev => {
+                        const existingIds = new Set(prev.map(l => l.id || l.ID));
+                        const uniqueNewLogs = newLogs.filter(l => !existingIds.has(l.id || l.ID));
+                        return [...prev, ...uniqueNewLogs];
+                    });
+                }
+                
+                if (newLogs.length < 10) {
+                    setHasMoreLogs(false);
+                }
+            } else {
+                console.error("Failed to fetch logs:", response.status);
+            }
+        } catch (err) {
+            console.error("Error fetching logs:", err);
+        } finally {
+            setLoadingLogs(false);
+        }
+    }, [loadingLogs]);
+
+    // Initial Fetch for Logs
+    useEffect(() => {
+        fetchLogs(0);
+    }, []);
+
+    // Infinite Scroll Observer Callback Ref (replaces observerTarget)
+    const observerTarget = useCallback(node => {
+        if (loadingLogs) return;
+        if (observer.current) observer.current.disconnect();
+        
+        observer.current = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting && hasMoreLogs) {
+                fetchLogs(activityLogs.length);
+            }
+        }, { threshold: 0.1, rootMargin: '100px' });
+        
+        if (node) observer.current.observe(node);
+    }, [loadingLogs, hasMoreLogs, activityLogs.length, fetchLogs]);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -217,7 +283,7 @@ function Profile({ showToast, onProfileUpdate }) {
                     // Account Info Card
                     React.createElement('div', { className: 'col-md-6' },
                         React.createElement('div', { className: 'modern-card h-100 border-0 shadow-sm p-4' }, [
-                            React.createElement('h5', { className: 'fw-bold mb-4 border-bottom pb-2' }, 'Account Details'),
+                            React.createElement('h5', { className: 'fw-bold mb-4 border-bottom border-secondary border-opacity-25 pb-2' }, 'Account Details'),
                             
                             // List Items
                             React.createElement('div', { className: 'd-flex flex-column gap-3' }, [
@@ -251,7 +317,7 @@ function Profile({ showToast, onProfileUpdate }) {
                     // Security Info Card
                     React.createElement('div', { className: 'col-md-6' },
                         React.createElement('div', { className: 'modern-card h-100 border-0 shadow-sm p-4' }, [
-                            React.createElement('h5', { className: 'fw-bold mb-4 border-bottom pb-2' }, 'Security & Activity'),
+                            React.createElement('h5', { className: 'fw-bold mb-4 border-bottom border-secondary border-opacity-25 pb-2' }, 'Security & Activity'),
                             
                             React.createElement('div', { className: 'd-flex flex-column gap-3' }, [
                                 React.createElement('div', { className: 'd-flex justify-content-between align-items-center' }, [
@@ -280,6 +346,111 @@ function Profile({ showToast, onProfileUpdate }) {
                             ])
                         ])
                     )
+                ])
+            ),
+
+            // Activity Logs Section
+            React.createElement('div', { key: 'activity', className: 'col-12' },
+                React.createElement('div', { className: 'modern-card border-0 shadow-sm p-4' }, [
+                    React.createElement('div', { className: 'd-flex align-items-center justify-content-between mb-4 border-bottom border-secondary border-opacity-25 pb-3' }, [
+                        React.createElement('h5', { className: 'fw-bold mb-0' }, 
+                            React.createElement('i', { className: 'fa-solid fa-clock-rotate-left me-2 text-primary' }),
+                            'Activity Log'
+                        ),
+                        React.createElement('span', { className: 'badge bg-secondary bg-opacity-10 text-secondary' }, 'Recent Activities')
+                    ]),
+                    
+                    React.createElement('div', { className: 'position-relative ps-3' }, [
+                        // Vertical Timeline Line
+                        React.createElement('div', { 
+                            className: 'position-absolute top-0 bottom-0 start-0 border-start border-secondary border-opacity-25',
+                            style: { left: '15px' }
+                        }),
+
+                        activityLogs.length === 0 && !loadingLogs && React.createElement('div', { className: 'text-center text-muted p-3 ps-5' }, 'No activity logs found.'),
+                        
+                        activityLogs.map((log, index) => {
+                            // Determine Icon and Color based on Action
+                            let iconClass = 'fa-circle-info';
+                            let colorClass = 'text-secondary';
+                            let bgClass = 'bg-secondary';
+                            
+                            const action = log.action ? log.action.toUpperCase() : '';
+                            
+                            if (action.includes('LOGIN_FAILED')) {
+                                iconClass = 'fa-shield-halved';
+                                colorClass = 'text-danger';
+                                bgClass = 'bg-danger';
+                            } else if (action === 'LOGIN') {
+                                iconClass = 'fa-right-to-bracket';
+                                colorClass = 'text-success';
+                                bgClass = 'bg-success';
+                            } else if (action === 'LOGOUT') {
+                                iconClass = 'fa-right-from-bracket';
+                                colorClass = 'text-warning';
+                                bgClass = 'bg-warning';
+                            } else if (action.includes('UPDATE') || action.includes('PROFILE')) {
+                                iconClass = 'fa-user-pen';
+                                colorClass = 'text-primary';
+                                bgClass = 'bg-primary';
+                            } else if (action.includes('AVATAR')) {
+                                iconClass = 'fa-image';
+                                colorClass = 'text-info';
+                                bgClass = 'bg-info';
+                            } else if (action.includes('KICK')) {
+                                iconClass = 'fa-ban';
+                                colorClass = 'text-danger';
+                                bgClass = 'bg-danger';
+                            }
+
+                            return React.createElement('div', { key: log.id || index, className: 'position-relative mb-4 ps-5 animate-fade-in' }, [
+                                // Timeline Dot/Icon
+                                React.createElement('div', { 
+                                    className: `position-absolute d-flex align-items-center justify-content-center rounded-circle shadow-sm border border-secondary border-opacity-25`,
+                                    style: { 
+                                        width: '32px', 
+                                        height: '32px', 
+                                        left: '0', 
+                                        top: '0',
+                                        backgroundColor: 'var(--card-bg)', // Match card background to stand out from page
+                                        zIndex: 1
+                                    } 
+                                }, 
+                                    React.createElement('i', { className: `fa-solid ${iconClass} ${colorClass} small` })
+                                ),
+
+                                // Content Card
+                                React.createElement('div', { 
+                                    className: 'card border border-secondary border-opacity-10 shadow-sm rounded-3 overflow-hidden',
+                                    style: { backgroundColor: 'var(--card-bg)' }
+                                }, [
+                                    React.createElement('div', { className: 'card-body p-3' }, [
+                                        React.createElement('div', { className: 'd-flex justify-content-between align-items-start mb-1' }, [
+                                            React.createElement('h6', { className: 'fw-bold mb-0 text-body' }, log.action),
+                                            React.createElement('small', { className: 'text-muted ms-2 whitespace-nowrap' }, 
+                                                React.createElement('i', { className: 'fa-regular fa-clock me-1' }),
+                                                // Strip 'Z' to treat as Local Time
+                                                new Date(log.createdAt.replace('Z', '')).toLocaleString(undefined, { 
+                                                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+                                                })
+                                            )
+                                        ]),
+                                        React.createElement('p', { className: 'mb-0 text-secondary small opacity-75' }, log.details)
+                                    ])
+                                ])
+                            ]);
+                        }),
+                        
+                        loadingLogs && React.createElement('div', { className: 'text-center p-3 ps-5' }, 
+                            React.createElement('div', { className: 'spinner-border spinner-border-sm text-primary' })
+                        ),
+                        
+                        // Sentinel for Infinite Scroll
+                        hasMoreLogs ? React.createElement('div', { 
+                            ref: observerTarget, 
+                            style: { height: '20px' } 
+                        }) : React.createElement('div', { className: 'text-center p-3 text-muted small ps-5 opacity-50' }, 'No more activities')
+                    ])
                 ])
             )
         ])

@@ -26,6 +26,7 @@ type UserRepository interface {
 	RemoveAvatar(email string) error
 	EmailExists(email string) (bool, error)
 	LogActivity(email, action, details string)
+	GetActivityLogs(userID int, limit int, offset int) ([]models.ActivityLog, error)
 	UpdateLoginStatus(email string, isLoggedIn bool) error
 	GetActiveUsers() ([]models.User, error)
 }

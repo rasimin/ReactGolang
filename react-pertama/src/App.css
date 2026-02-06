@@ -6,15 +6,18 @@
   --secondary-gradient: linear-gradient(135deg, #3b82f6 0%, #2dd4bf 100%);
   
   /* Light Mode - Soft & Airy */
-  --bg-body: #f8fafc;
+  --bg-body: #f3f4f6; /* Gray 100 - Distinct from white components */
   --bg-card: #ffffff;
+  --header-bg: rgba(255, 255, 255, 0.85); /* Glassy White */
   --text-main: #1e293b;
   --text-muted: #64748b;
   --border-color: #e2e8f0;
+  
+  /* Sidebar Distinct Color */
   --sidebar-bg: #ffffff;
   --sidebar-text: #64748b;
-  --sidebar-active-bg: #f1f5f9;
-  --sidebar-active-text: #6366f1;
+  --sidebar-active-bg: #eff6ff; /* Blue 50 */
+  --sidebar-active-text: #4f46e5; /* Indigo 600 */
   
   /* Softer Shadows */
   --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
@@ -29,14 +32,17 @@
 
 body.dark {
   /* Dark Mode - Deep & Vibrant */
-  --bg-body: #0f172a;
-  --bg-card: #1e293b;
+  --bg-body: #0f172a; /* Slate 900 */
+  --bg-card: #1e293b; /* Slate 800 */
+  --header-bg: rgba(15, 23, 42, 0.75); /* Deep Glassy */
   --text-main: #f1f5f9;
   --text-muted: #94a3b8;
-  --border-color: rgba(255, 255, 255, 0.06); /* Much softer border */
-  --sidebar-bg: #1e293b;
+  --border-color: rgba(255, 255, 255, 0.08); /* More visible border */
+  
+  /* Sidebar Darker for Contrast */
+  --sidebar-bg: #020617; /* Slate 950 - Darker than body */
   --sidebar-text: #94a3b8;
-  --sidebar-active-bg: rgba(255, 255, 255, 0.03); /* Subtle active bg */
+  --sidebar-active-bg: rgba(99, 102, 241, 0.15); /* Indigo tint */
   --sidebar-active-text: #818cf8;
   
   /* Dark Mode Shadows */
@@ -655,6 +661,9 @@ body.dark .sidebar-modern .nav-link-modern i {
   transition: all 0.2s ease;
   font-weight: 500;
   text-decoration: none;
+  display: flex;
+  align-items: center;
+  width: 100%;
 }
 
 .nav-link-modern:hover {
@@ -671,6 +680,14 @@ body.dark .sidebar-modern .nav-link-modern i {
   max-height: 0;
   overflow: hidden;
   transition: max-height 0.3s ease-out;
+  margin-top: 0.5rem; /* Increased spacing */
+  position: relative;
+  z-index: 1;
+}
+
+.submenu-wrapper.open {
+  max-height: 800px;
+  /* overflow: visible; Removed to keep animation smooth, increased max-height */
 }
 
 .submenu-wrapper .nav-item {
@@ -682,11 +699,13 @@ body.dark .sidebar-modern .nav-link-modern i {
     padding-bottom: 0.6rem;
     font-size: 0.9rem;
     transition: all 0.2s ease;
+    margin-left: 0.5rem; /* Add gap from border */
+    width: calc(100% - 0.5rem); /* Adjust width */
 }
 
 .submenu-wrapper .nav-link-modern:hover {
     padding-left: 1.2rem; /* Efek geser halus saat hover */
-    background-color: transparent; /* Tetap transparan agar bersih */
+    background-color: var(--hover-bg); /* Background hover effect */
     color: var(--sidebar-active-text);
 }
 
@@ -730,7 +749,9 @@ body.dark .sidebar-modern .nav-link-modern i {
 
 /* Header */
 .header-modern {
-  background-color: var(--bg-card);
+  background-color: var(--header-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border-color);
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }

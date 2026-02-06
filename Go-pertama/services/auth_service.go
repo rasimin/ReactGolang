@@ -85,7 +85,7 @@ func (s *authService) Login(req models.LoginRequest) (*models.LoginResponse, err
 		s.userRepo.UpdateFailedAttempts(user.ID, newAttempts)
 
 		s.userRepo.LogActivity(req.Email, "LOGIN_FAILED", fmt.Sprintf("Wrong password. Attempt: %d", newAttempts))
-		return nil, errors.New("invalid credentials")
+		return nil, fmt.Errorf("invalid credentials. Failed attempts: %d", newAttempts)
 	}
 }
 

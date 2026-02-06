@@ -24,6 +24,7 @@ type UserService interface {
 	ResetFailedAttempts(id int, updatedBy string) error
 	GetActiveUsers() ([]models.User, error)
 	KickUser(email string, kickedBy string) error
+	GetActivityLogs(email string, limit int, offset int) ([]models.ActivityLog, error)
 }
 
 type userService struct {

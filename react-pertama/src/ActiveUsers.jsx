@@ -6,6 +6,8 @@ export default function ActiveUsers({ showToast, onLogout }) {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isFirstLoad, setIsFirstLoad] = useState(true);
+    const [showKickModal, setShowKickModal] = useState(false);
+    const [userToKick, setUserToKick] = useState(null);
 
     const fetchActiveUsers = async () => {
         setLoading(true);
@@ -35,8 +37,13 @@ export default function ActiveUsers({ showToast, onLogout }) {
         }
     };
 
-    const handleKick = async (email) => {
-        if (!confirm(`Are you sure you want to kick user ${email}?`)) return;
+    const handleKick = (user) => {
+        setUserToKick(user);
+        setShowKickModal(true);
+    };
+
+    const confirmKick = async () => {
+        if (!userToKick) return;
 
         try {
             const response = await fetch(`${config.api.baseUrl}/api/users/kick`, {
@@ -45,11 +52,11 @@ export default function ActiveUsers({ showToast, onLogout }) {
                     'Authorization': 'Bearer ' + (localStorage.getItem('token') || ''),
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ email })
+                body: JSON.stringify({ email: userToKick.email })
             });
 
             if (response.ok) {
-                showToast(`User ${email} has been kicked.`, 'success');
+                showToast(`User ${userToKick.email} has been kicked.`, 'success');
                 fetchActiveUsers();
             } else {
                 if (response.status === 401) {
@@ -62,6 +69,9 @@ export default function ActiveUsers({ showToast, onLogout }) {
         } catch (err) {
             console.error(err);
             showToast('Error kicking user', 'error');
+        } finally {
+            setShowKickModal(false);
+            setUserToKick(null);
         }
     };
 
@@ -83,7 +93,7 @@ export default function ActiveUsers({ showToast, onLogout }) {
         );
     }
 
-    return React.createElement('div', { className: 'container-fluid p-4' }, [
+    return React.createElement('div', { className: 'container-fluid p-4 animate-fade-in' }, [
         React.createElement('div', { key: 'header', className: 'd-flex justify-content-between align-items-center mb-4' }, [
             React.createElement('div', { key: 'title' }, [
                 React.createElement('h2', { className: 'fw-bold mb-1' }, 'Active Sessions'),
@@ -134,7 +144,7 @@ export default function ActiveUsers({ showToast, onLogout }) {
                                 React.createElement('td', { className: 'text-end pe-4', key: 'td-actions' }, 
                                     React.createElement('button', {
                                         className: 'btn btn-sm btn-danger rounded-pill px-3',
-                                        onClick: () => handleKick(user.email)
+                                        onClick: () => handleKick(user)
                                     }, [
                                         React.createElement('i', { className: 'fa-solid fa-power-off me-2', key: 'icon-kick' }),
                                         'Kick'
@@ -147,6 +157,46 @@ export default function ActiveUsers({ showToast, onLogout }) {
                     )
                 ])
             )
-        ])
+        ]),
+
+        // Kick Confirmation Modal
+        showKickModal && window.ReactDOM.createPortal(
+            React.createElement('div', { className: 'modal fade show d-block', style: { backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }, tabIndex: '-1' },
+                React.createElement('div', { className: 'modal-dialog modal-dialog-centered' },
+                    React.createElement('div', { className: 'modal-content modern-card border-0 shadow-lg' }, [
+                        React.createElement('div', { className: 'modal-header border-0 pb-0' }, [
+                            React.createElement('h5', { className: 'modal-title fw-bold text-danger' }, 
+                                React.createElement('i', { className: 'fa-solid fa-triangle-exclamation me-2' }),
+                                'Confirm Kick'
+                            ),
+                            React.createElement('button', { type: 'button', className: 'btn-close', onClick: () => setShowKickModal(false) })
+                        ]),
+                        React.createElement('div', { className: 'modal-body py-4' }, [
+                            React.createElement('p', { className: 'mb-0 text-muted fs-6' }, [
+                                'Are you sure you want to kick user ',
+                                React.createElement('strong', { className: 'text-body' }, userToKick?.name || userToKick?.email),
+                                '?'
+                            ]),
+                            React.createElement('p', { className: 'small text-muted mt-2 mb-0' }, 'This will immediately terminate their active session.')
+                        ]),
+                        React.createElement('div', { className: 'modal-footer border-0 pt-0' }, [
+                            React.createElement('button', { 
+                                type: 'button', 
+                                className: 'btn btn-light btn-modern-light', 
+                                onClick: () => setShowKickModal(false) 
+                            }, 'Cancel'),
+                            React.createElement('button', { 
+                                type: 'button', 
+                                className: 'btn btn-danger',
+                                onClick: confirmKick
+                            }, [
+                                React.createElement('i', { className: 'fa-solid fa-power-off me-2' }),
+                                'Kick User'
+                            ])
+                        ])
+                    ])
+                )
+            ), document.body
+        )
     ]);
 }

@@ -165,7 +165,7 @@ export default function UserSecurity({ showToast }) {
     );
   }
 
-  return React.createElement('div', { className: 'container-fluid p-4' }, [
+  return React.createElement('div', { className: 'container-fluid p-4 animate-fade-in' }, [
     // Header
     React.createElement('div', { key: 'header', className: 'd-flex justify-content-between align-items-center mb-4' }, [
       React.createElement('div', null, [
@@ -301,82 +301,86 @@ export default function UserSecurity({ showToast }) {
     ]),
 
     // Password Reset Modal
-    showPasswordModal && React.createElement('div', { className: 'modal fade show d-block', style: { backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 } },
-        React.createElement('div', { className: 'modal-dialog modal-dialog-centered' },
-            React.createElement('div', { className: 'modal-content modern-card border-0' }, [
-                React.createElement('div', { className: 'modal-header border-0' }, [
-                    React.createElement('h5', { className: 'modal-title fw-bold' }, 'Reset Password'),
-                    React.createElement('button', { type: 'button', className: 'btn-close', onClick: () => setShowPasswordModal(false) })
-                ]),
-                React.createElement('form', { onSubmit: handleResetPassword }, [
-                    React.createElement('div', { className: 'modal-body' }, [
-                        React.createElement('div', { className: 'alert alert-info' }, 
-                            `Resetting password for ${selectedUser?.name} (${selectedUser?.email})`
-                        ),
-                        React.createElement('div', { className: 'mb-3' }, [
-                            React.createElement('label', { className: 'form-label' }, 'New Password'),
-                            React.createElement('input', {
-                                type: 'password',
-                                className: 'form-control form-control-modern',
-                                value: newPassword,
-                                onChange: (e) => setNewPassword(e.target.value),
-                                placeholder: 'Enter new password',
-                                required: true
-                            })
-                        ])
+    showPasswordModal && window.ReactDOM.createPortal(
+        React.createElement('div', { className: 'modal fade show d-block', style: { backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }, tabIndex: '-1' },
+            React.createElement('div', { className: 'modal-dialog modal-dialog-centered' },
+                React.createElement('div', { className: 'modal-content modern-card border-0' }, [
+                    React.createElement('div', { className: 'modal-header border-0' }, [
+                        React.createElement('h5', { className: 'modal-title fw-bold' }, 'Reset Password'),
+                        React.createElement('button', { type: 'button', className: 'btn-close', onClick: () => setShowPasswordModal(false) })
                     ]),
-                    React.createElement('div', { className: 'modal-footer border-0' }, [
-                        React.createElement('button', { 
-                            type: 'button', 
-                            className: 'btn btn-light btn-modern-light', 
-                            onClick: () => setShowPasswordModal(false) 
-                        }, 'Cancel'),
-                        React.createElement('button', { 
-                            type: 'submit', 
-                            className: 'btn btn-primary btn-modern-primary' 
-                        }, 'Reset Password')
+                    React.createElement('form', { onSubmit: handleResetPassword }, [
+                        React.createElement('div', { className: 'modal-body' }, [
+                            React.createElement('div', { className: 'alert alert-info' }, 
+                                `Resetting password for ${selectedUser?.name} (${selectedUser?.email})`
+                            ),
+                            React.createElement('div', { className: 'mb-3' }, [
+                                React.createElement('label', { className: 'form-label' }, 'New Password'),
+                                React.createElement('input', {
+                                    type: 'password',
+                                    className: 'form-control form-control-modern',
+                                    value: newPassword,
+                                    onChange: (e) => setNewPassword(e.target.value),
+                                    placeholder: 'Enter new password',
+                                    required: true
+                                })
+                            ])
+                        ]),
+                        React.createElement('div', { className: 'modal-footer border-0' }, [
+                            React.createElement('button', { 
+                                type: 'button', 
+                                className: 'btn btn-light btn-modern-light', 
+                                onClick: () => setShowPasswordModal(false) 
+                            }, 'Cancel'),
+                            React.createElement('button', { 
+                                type: 'submit', 
+                                className: 'btn btn-primary btn-modern-primary' 
+                            }, 'Reset Password')
+                        ])
                     ])
                 ])
-            ])
-        )
+            )
+        ), document.body
     ),
 
     // Reset Counter Confirmation Modal
-    showResetCounterModal && React.createElement('div', { className: 'modal fade show d-block', style: { backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 } },
-        React.createElement('div', { className: 'modal-dialog modal-dialog-centered' },
-            React.createElement('div', { className: 'modal-content modern-card border-0 shadow-lg' }, [
-                React.createElement('div', { className: 'modal-header border-0 pb-0' }, [
-                    React.createElement('h5', { className: 'modal-title fw-bold text-warning' }, 
-                        React.createElement('i', { className: 'fa-solid fa-triangle-exclamation me-2' }),
-                        'Confirm Reset'
-                    ),
-                    React.createElement('button', { type: 'button', className: 'btn-close', onClick: () => setShowResetCounterModal(false) })
-                ]),
-                React.createElement('div', { className: 'modal-body py-4' }, [
-                    React.createElement('p', { className: 'mb-0 text-muted fs-6' }, [
-                        'Are you sure you want to reset failed login attempts for ',
-                        React.createElement('strong', { className: 'text-body' }, userToResetCounter?.name),
-                        '?'
+    showResetCounterModal && window.ReactDOM.createPortal(
+        React.createElement('div', { className: 'modal fade show d-block', style: { backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }, tabIndex: '-1' },
+            React.createElement('div', { className: 'modal-dialog modal-dialog-centered' },
+                React.createElement('div', { className: 'modal-content modern-card border-0 shadow-lg' }, [
+                    React.createElement('div', { className: 'modal-header border-0 pb-0' }, [
+                        React.createElement('h5', { className: 'modal-title fw-bold text-warning' }, 
+                            React.createElement('i', { className: 'fa-solid fa-triangle-exclamation me-2' }),
+                            'Confirm Reset'
+                        ),
+                        React.createElement('button', { type: 'button', className: 'btn-close', onClick: () => setShowResetCounterModal(false) })
                     ]),
-                    React.createElement('p', { className: 'small text-muted mt-2 mb-0' }, 'This will unlock the account if it was locked due to too many failed attempts.')
-                ]),
-                React.createElement('div', { className: 'modal-footer border-0 pt-0' }, [
-                    React.createElement('button', { 
-                        type: 'button', 
-                        className: 'btn btn-light btn-modern-light', 
-                        onClick: () => setShowResetCounterModal(false) 
-                    }, 'Cancel'),
-                    React.createElement('button', { 
-                        type: 'button', 
-                        className: 'btn btn-warning text-white',
-                        onClick: confirmResetCounter
-                    }, [
-                        React.createElement('i', { className: 'fa-solid fa-rotate-left me-2' }),
-                        'Reset Counter'
+                    React.createElement('div', { className: 'modal-body py-4' }, [
+                        React.createElement('p', { className: 'mb-0 text-muted fs-6' }, [
+                            'Are you sure you want to reset failed login attempts for ',
+                            React.createElement('strong', { className: 'text-body' }, userToResetCounter?.name),
+                            '?'
+                        ]),
+                        React.createElement('p', { className: 'small text-muted mt-2 mb-0' }, 'This will unlock the account if it was locked due to too many failed attempts.')
+                    ]),
+                    React.createElement('div', { className: 'modal-footer border-0 pt-0' }, [
+                        React.createElement('button', { 
+                            type: 'button', 
+                            className: 'btn btn-light btn-modern-light', 
+                            onClick: () => setShowResetCounterModal(false) 
+                        }, 'Cancel'),
+                        React.createElement('button', { 
+                            type: 'button', 
+                            className: 'btn btn-warning text-white',
+                            onClick: confirmResetCounter
+                        }, [
+                            React.createElement('i', { className: 'fa-solid fa-rotate-left me-2' }),
+                            'Reset Counter'
+                        ])
                     ])
                 ])
-            ])
-        )
+            )
+        ), document.body
     )
   ]);
 }

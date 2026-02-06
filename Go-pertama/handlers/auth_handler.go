@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"go-pertama/models"
 	"go-pertama/services"
 	"net/http"
@@ -32,6 +33,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.authService.Login(creds)
 	if err != nil {
+		fmt.Printf("Login failed: %v\n", err)
 		statusCode := http.StatusUnauthorized
 		if err.Error() == "database connection error" {
 			statusCode = http.StatusInternalServerError

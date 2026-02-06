@@ -53,6 +53,14 @@ func migrateDB() {
 		 ALTER TABLE Users ADD AvatarType NVARCHAR(50) NULL;`,
 		`IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'IsLoggedIn' AND Object_ID = Object_ID(N'Users'))
 		 ALTER TABLE Users ADD IsLoggedIn BIT DEFAULT 0 WITH VALUES;`,
+		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='ActivityLogs' and xtype='U')
+		 CREATE TABLE ActivityLogs (
+			ID INT IDENTITY(1,1) PRIMARY KEY,
+			UserID INT NOT NULL,
+			Action NVARCHAR(100) NOT NULL,
+			Details NVARCHAR(MAX),
+			CreatedAt DATETIME DEFAULT GETDATE()
+		 );`,
 	}
 
 	for _, q := range queries {
@@ -281,6 +289,7 @@ func main() {
 
 	// User Routes
 	mux.HandleFunc("/api/profile", middleware.EnableCORS(authMiddleware(userHandler.GetProfile)))
+	mux.HandleFunc("/api/profile/activity", middleware.EnableCORS(authMiddleware(userHandler.GetActivityLogs)))
 	mux.HandleFunc("/api/users/active", middleware.EnableCORS(authMiddleware(userHandler.GetActiveUsers)))
 	mux.HandleFunc("/api/users/kick", middleware.EnableCORS(authMiddleware(userHandler.KickUser)))
 	mux.HandleFunc("/api/users", middleware.EnableCORS(authMiddleware(func(w http.ResponseWriter, r *http.Request) {

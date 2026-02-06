@@ -192,7 +192,7 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
               id: `submenu-${item.id}`
             }, 
               React.createElement('div', { className: 'submenu-inner' },
-                React.createElement('ul', { className: 'nav flex-column ms-3 ps-3 border-start border-2' },
+                React.createElement('ul', { className: 'nav flex-column ms-3 ps-0 border-start border-2' },
                   item.children.map(child => 
                     React.createElement('li', { key: child.id, className: 'nav-item' },
                       React.createElement('a', {
@@ -202,7 +202,7 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
                           e.preventDefault();
                           setActiveMenu(child.id);
                         },
-                        style: { background: 'transparent', boxShadow: 'none' }
+                        style: { boxShadow: 'none' }
                       }, [
                         child.icon && React.createElement('i', { key: 'icon', className: `${child.icon} me-2` }),
                         child.label
@@ -231,7 +231,7 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
                         setActiveMenu(child.id);
                         setHoveredMenu(null); // Close flyout on selection
                       },
-                      style: { background: 'transparent', boxShadow: 'none' }
+                      style: { boxShadow: 'none' }
                     }, [
                       child.icon && React.createElement('i', { key: 'icon', className: `${child.icon} me-2` }),
                       child.label
