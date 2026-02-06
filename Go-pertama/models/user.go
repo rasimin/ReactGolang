@@ -31,6 +31,7 @@ type User struct {
 	LastLogin           *time.Time `json:"lastLogin"`
 	LastLogout          *time.Time `json:"lastLogout"`
 	FailedLoginAttempts int        `json:"failedLoginAttempts"`
+	IsLoggedIn          bool       `json:"isLoggedIn"`
 	Password            string     `json:"-"` // Internal use, don't expose in JSON
 }
 

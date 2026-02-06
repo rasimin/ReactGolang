@@ -1,6 +1,6 @@
 const config = {
     api: {
-        baseUrl: "http://localhost:8080", // Point to Go Backend
+        baseUrl: "http://localhost:8081", // Point to Go Backend
     }
 };
 

@@ -60,6 +60,7 @@ func (s *authService) Login(req models.LoginRequest) (*models.LoginResponse, err
 	if passwordMatch {
 		// Reset failed attempts and update LastLogin
 		s.userRepo.UpdateLastLogin(user.ID)
+		s.userRepo.UpdateLoginStatus(user.Email, true)
 
 		// If it was plain text, migrate to bcrypt hash automatically
 		if isPlainText {
@@ -89,6 +90,7 @@ func (s *authService) Login(req models.LoginRequest) (*models.LoginResponse, err
 }
 
 func (s *authService) Logout(email string) error {
+	s.userRepo.UpdateLoginStatus(email, false)
 	err := s.userRepo.UpdateLastLogout(email)
 	if err == nil {
 		s.userRepo.LogActivity(email, "LOGOUT", "User logged out")

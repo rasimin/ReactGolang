@@ -51,6 +51,8 @@ func migrateDB() {
 		 ALTER TABLE Users ADD Avatar VARBINARY(MAX) NULL;`,
 		`IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'AvatarType' AND Object_ID = Object_ID(N'Users'))
 		 ALTER TABLE Users ADD AvatarType NVARCHAR(50) NULL;`,
+		`IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'IsLoggedIn' AND Object_ID = Object_ID(N'Users'))
+		 ALTER TABLE Users ADD IsLoggedIn BIT DEFAULT 0 WITH VALUES;`,
 	}
 
 	for _, q := range queries {
@@ -229,10 +231,12 @@ func seedConfigDB(db *gorm.DB) {
 func main() {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("Recovered from panic:", r)
+			log.Printf("Recovered from panic: %v\n", r)
+			os.Exit(1)
 		}
 	}()
 
+	fmt.Println("Starting Main...")
 	// Load configuration
 	var err error
 	appConfig, err = config.LoadConfig()
@@ -265,16 +269,21 @@ func main() {
 	changeLogHandler := handlers.NewChangeLogHandler()
 	roleHandler := handlers.NewRoleHandler(roleService)
 
+	// Initialize Middleware
+	authMiddleware := middleware.AuthMiddleware(db)
+
 	mux := http.NewServeMux()
 
 	// Auth Routes
 	mux.HandleFunc("/login", middleware.EnableCORS(authHandler.Login))
-	mux.HandleFunc("/logout", middleware.EnableCORS(middleware.AuthMiddleware(authHandler.Logout)))
-	mux.HandleFunc("/change-password", middleware.EnableCORS(middleware.AuthMiddleware(authHandler.ChangePassword)))
+	mux.HandleFunc("/logout", middleware.EnableCORS(authMiddleware(authHandler.Logout)))
+	mux.HandleFunc("/change-password", middleware.EnableCORS(authMiddleware(authHandler.ChangePassword)))
 
 	// User Routes
-	mux.HandleFunc("/api/profile", middleware.EnableCORS(middleware.AuthMiddleware(userHandler.GetProfile)))
-	mux.HandleFunc("/api/users", middleware.EnableCORS(middleware.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/profile", middleware.EnableCORS(authMiddleware(userHandler.GetProfile)))
+	mux.HandleFunc("/api/users/active", middleware.EnableCORS(authMiddleware(userHandler.GetActiveUsers)))
+	mux.HandleFunc("/api/users/kick", middleware.EnableCORS(authMiddleware(userHandler.KickUser)))
+	mux.HandleFunc("/api/users", middleware.EnableCORS(authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			userHandler.GetUsers(w, r)
 		} else if r.Method == http.MethodPost {
@@ -288,17 +297,17 @@ func main() {
 		}
 	})))
 
-	mux.HandleFunc("/api/users/reset-counter", middleware.EnableCORS(middleware.AuthMiddleware(userHandler.ResetFailedAttempts)))
+	mux.HandleFunc("/api/users/reset-counter", middleware.EnableCORS(authMiddleware(userHandler.ResetFailedAttempts)))
 
-	mux.HandleFunc("/upload", middleware.EnableCORS(middleware.AuthMiddleware(userHandler.UploadProfilePicture)))
-	mux.HandleFunc("/api/avatar/remove", middleware.EnableCORS(middleware.AuthMiddleware(userHandler.RemoveAvatar)))
+	mux.HandleFunc("/upload", middleware.EnableCORS(authMiddleware(userHandler.UploadProfilePicture)))
+	mux.HandleFunc("/api/avatar/remove", middleware.EnableCORS(authMiddleware(userHandler.RemoveAvatar)))
 	mux.HandleFunc("/api/avatar", middleware.EnableCORS(userHandler.GetAvatar))
 
 	// Change Log Route
-	mux.HandleFunc("/api/changelog", middleware.EnableCORS(middleware.AuthMiddleware(changeLogHandler.GetChangeLog)))
+	mux.HandleFunc("/api/changelog", middleware.EnableCORS(authMiddleware(changeLogHandler.GetChangeLog)))
 
 	// Role Routes
-	mux.HandleFunc("/api/roles", middleware.EnableCORS(middleware.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/roles", middleware.EnableCORS(authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			roleHandler.GetRoles(w, r)
 		} else if r.Method == http.MethodPost {
@@ -308,7 +317,7 @@ func main() {
 		}
 	})))
 
-	mux.HandleFunc("/api/roles/", middleware.EnableCORS(middleware.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/roles/", middleware.EnableCORS(authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 		// Handle /api/roles/{id}
 		if len(path) > len("/api/roles/") {
@@ -327,7 +336,7 @@ func main() {
 	})))
 
 	// Config Routes
-	mux.HandleFunc("/api/configs", middleware.EnableCORS(middleware.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/configs", middleware.EnableCORS(authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/api/configs" {
 			if r.Method == http.MethodGet {
 				configHandler.GetConfigs(w, r)
@@ -341,7 +350,7 @@ func main() {
 		}
 	})))
 
-	mux.HandleFunc("/api/configs/", middleware.EnableCORS(middleware.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/configs/", middleware.EnableCORS(authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 
 		// Handle /api/configs/{id}/history
@@ -379,10 +388,11 @@ func main() {
 	}
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("uploads"))))
 
-	port := "8080"
+	port := "8081"
 	fmt.Printf("Server starting on port %s...\n", port)
 	if err := http.ListenAndServe(":"+port, mux); err != nil {
-		log.Fatal(err)
+		fmt.Printf("FATAL ERROR: %v\n", err)
+		os.Exit(1)
 	}
-	fmt.Println("Server Exited")
+	fmt.Println("Exiting main...")
 }

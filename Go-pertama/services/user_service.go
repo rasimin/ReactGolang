@@ -22,6 +22,8 @@ type UserService interface {
 	RemoveAvatar(email string) error
 	GetProfile(email string) (*models.User, error)
 	ResetFailedAttempts(id int, updatedBy string) error
+	GetActiveUsers() ([]models.User, error)
+	KickUser(email string, kickedBy string) error
 }
 
 type userService struct {
@@ -36,6 +38,18 @@ func (s *userService) ResetFailedAttempts(id int, updatedBy string) error {
 	err := s.repo.UpdateFailedAttempts(id, 0)
 	if err == nil {
 		s.repo.LogActivity(updatedBy, "RESET_FAILED_ATTEMPTS", fmt.Sprintf("Reset failed attempts for user ID %d", id))
+	}
+	return err
+}
+
+func (s *userService) GetActiveUsers() ([]models.User, error) {
+	return s.repo.GetActiveUsers()
+}
+
+func (s *userService) KickUser(email string, kickedBy string) error {
+	err := s.repo.UpdateLoginStatus(email, false)
+	if err == nil {
+		s.repo.LogActivity(kickedBy, "KICK_USER", "Forced logout for "+email)
 	}
 	return err
 }

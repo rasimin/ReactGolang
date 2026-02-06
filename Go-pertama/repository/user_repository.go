@@ -26,6 +26,8 @@ type UserRepository interface {
 	RemoveAvatar(email string) error
 	EmailExists(email string) (bool, error)
 	LogActivity(email, action, details string)
+	UpdateLoginStatus(email string, isLoggedIn bool) error
+	GetActiveUsers() ([]models.User, error)
 }
 
 type userRepository struct {
@@ -43,12 +45,12 @@ func (r *userRepository) GetByEmail(email string) (*models.User, error) {
 	var lastLogin, lastLogout sql.NullTime
 	var roleID sql.NullInt64
 
-	query := `SELECT u.ID, u.Email, u.Password, u.Name, COALESCE(r.Name, u.Role), u.RoleID, u.IsActive, u.ProfilePicture, u.AvatarType, u.LastLogin, u.LastLogout, u.FailedLoginAttempts 
+	query := `SELECT u.ID, u.Email, u.Password, u.Name, COALESCE(r.Name, u.Role), u.RoleID, u.IsActive, u.ProfilePicture, u.AvatarType, u.LastLogin, u.LastLogout, u.FailedLoginAttempts, u.IsLoggedIn
 			  FROM Users u 
 			  LEFT JOIN Roles r ON u.RoleID = r.ID 
 			  WHERE u.Email = @p1`
 	err := r.db.QueryRow(query, email).Scan(
-		&u.ID, &u.Email, &u.Password, &u.Name, &u.Role, &roleID, &u.IsActive, &pp, &avatarType, &lastLogin, &lastLogout, &u.FailedLoginAttempts,
+		&u.ID, &u.Email, &u.Password, &u.Name, &u.Role, &roleID, &u.IsActive, &pp, &avatarType, &lastLogin, &lastLogout, &u.FailedLoginAttempts, &u.IsLoggedIn,
 	)
 	if err != nil {
 		return nil, err
@@ -79,12 +81,12 @@ func (r *userRepository) GetByID(id int) (*models.User, error) {
 	var lastLogin, lastLogout sql.NullTime
 	var roleID sql.NullInt64
 
-	query := `SELECT u.ID, u.Email, u.Password, u.Name, COALESCE(r.Name, u.Role), u.RoleID, u.IsActive, u.ProfilePicture, u.LastLogin, u.LastLogout, u.FailedLoginAttempts 
+	query := `SELECT u.ID, u.Email, u.Password, u.Name, COALESCE(r.Name, u.Role), u.RoleID, u.IsActive, u.ProfilePicture, u.LastLogin, u.LastLogout, u.FailedLoginAttempts, u.IsLoggedIn
 			  FROM Users u 
 			  LEFT JOIN Roles r ON u.RoleID = r.ID 
 			  WHERE u.ID = @p1`
 	err := r.db.QueryRow(query, id).Scan(
-		&u.ID, &u.Email, &u.Password, &u.Name, &u.Role, &roleID, &u.IsActive, &pp, &lastLogin, &lastLogout, &u.FailedLoginAttempts,
+		&u.ID, &u.Email, &u.Password, &u.Name, &u.Role, &roleID, &u.IsActive, &pp, &lastLogin, &lastLogout, &u.FailedLoginAttempts, &u.IsLoggedIn,
 	)
 	if err != nil {
 		return nil, err
@@ -286,4 +288,50 @@ func (r *userRepository) LogActivity(email, action, details string) {
 	if err != nil {
 		log.Printf("Failed to insert activity log: %v", err)
 	}
+}
+
+func (r *userRepository) UpdateLoginStatus(email string, isLoggedIn bool) error {
+	_, err := r.db.Exec("UPDATE Users SET IsLoggedIn = @p1 WHERE Email = @p2", isLoggedIn, email)
+	return err
+}
+
+func (r *userRepository) GetActiveUsers() ([]models.User, error) {
+	rows, err := r.db.Query(`
+		SELECT u.ID, u.Email, u.Name, COALESCE(r.Name, u.Role), u.RoleID, u.IsActive, u.LastLogin, u.LastLogout, u.IsLoggedIn
+		FROM Users u
+		LEFT JOIN Roles r ON u.RoleID = r.ID
+		WHERE u.IsLoggedIn = 1
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	users := []models.User{} // Initialize as empty slice, not nil
+	for rows.Next() {
+		var u models.User
+		var roleID sql.NullInt64
+		var lastLogin, lastLogout sql.NullTime
+		var roleName sql.NullString
+
+		if err := rows.Scan(&u.ID, &u.Email, &u.Name, &roleName, &roleID, &u.IsActive, &lastLogin, &lastLogout, &u.IsLoggedIn); err != nil {
+			log.Printf("Error scanning active user: %v", err)
+			continue // Skip bad rows instead of failing completely
+		}
+
+		if roleName.Valid {
+			u.Role = roleName.String
+		}
+		if roleID.Valid {
+			u.RoleID = int(roleID.Int64)
+		}
+		if lastLogin.Valid {
+			u.LastLogin = &lastLogin.Time
+		}
+		if lastLogout.Valid {
+			u.LastLogout = &lastLogout.Time
+		}
+		users = append(users, u)
+	}
+	return users, nil
 }

@@ -13,6 +13,7 @@ import Workspaces from '/src/Workspaces.jsx';
 import Transactions from '/src/Transactions.jsx';
 import Documentation from '/src/Documentation.jsx';
 import UserSecurity from '/src/UserSecurity.jsx';
+import ActiveUsers from '/src/ActiveUsers.jsx';
 
 // --- Components ---
 
@@ -32,6 +33,7 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
     { id: 'workspaces', label: 'Workspaces', icon: 'fa-solid fa-building' },
     { id: 'transactions', label: 'Transactions', icon: 'fa-solid fa-money-bill-transfer' },
     { id: 'users', label: 'Users', icon: 'fa-solid fa-users' },
+    { id: 'active-users', label: 'Active Sessions', icon: 'fa-solid fa-signal' },
     { id: 'user-security', label: 'User Security', icon: 'fa-solid fa-user-lock' },
     { id: 'roles', label: 'Roles Access', icon: 'fa-solid fa-shield-halved' },
 
@@ -406,7 +408,7 @@ function DashboardStats() {
   );
 }
 
-function DashboardContent({ activeMenu, showToast, updateUser }) {
+function DashboardContent({ activeMenu, showToast, updateUser, onLogout }) {
   if (activeMenu === 'dashboard') {
     return React.createElement('div', { className: 'p-4' }, [
       React.createElement(DashboardStats, { key: 'stats' }),
@@ -433,6 +435,10 @@ function DashboardContent({ activeMenu, showToast, updateUser }) {
 
   if (activeMenu === 'users') {
     return React.createElement(Users, { showToast });
+  }
+
+  if (activeMenu === 'active-users') {
+    return React.createElement(ActiveUsers, { showToast, onLogout });
   }
 
   if (activeMenu === 'user-security') {
@@ -500,17 +506,22 @@ function DashboardLayout({ onLogout, isDarkMode, toggleTheme, togglePasswordModa
         className: 'flex-grow-1 overflow-auto custom-scrollbar', 
         style: { marginTop: '0' } 
       }, 
-        React.createElement(DashboardContent, { activeMenu: activeMenu, showToast: showToast, updateUser: updateUser })
+        React.createElement(DashboardContent, { activeMenu: activeMenu, showToast: showToast, updateUser: updateUser, onLogout: onLogout })
       )
     ])
   ]);
 }
 
-function LoginPage({ onLogin, isDarkMode, toggleTheme }) {
+function LoginPage({ onLogin, isDarkMode, toggleTheme, initialError }) {
   const [email, setEmail] = useState('admin@example.com');
   const [password, setPassword] = useState('password123');
-  const [error, setError] = useState('');
+  const [error, setError] = useState(initialError || '');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Update error if initialError changes (optional, but good for sync)
+  useEffect(() => {
+    if (initialError) setError(initialError);
+  }, [initialError]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -643,6 +654,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [toasts, setToasts] = useState([]);
+  const [loginError, setLoginError] = useState(null); // Global login error state
 
   const showToast = (message, type = 'success') => {
     const id = Date.now();
@@ -697,9 +709,10 @@ function App() {
   const handleLogin = (user) => {
     setIsLoggedIn(true);
     setUser(user);
+    setLoginError(null);
   };
 
-  const handleLogout = async () => {
+  const handleLogout = async (reason = null) => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -718,6 +731,11 @@ function App() {
       localStorage.removeItem('user');
       setIsLoggedIn(false);
       setUser(null);
+      if (reason && typeof reason === 'string') {
+          setLoginError(reason);
+      } else {
+          setLoginError(null);
+      }
       
       // Small delay to show the loading screen briefly before showing login
       setTimeout(() => {
@@ -734,7 +752,8 @@ function App() {
     return React.createElement(LoginPage, { 
       onLogin: handleLogin,
       isDarkMode: isDarkMode,
-      toggleTheme: toggleTheme
+      toggleTheme: toggleTheme,
+      initialError: loginError
     });
   }
 
