@@ -70,6 +70,8 @@ type ChangePasswordRequest struct {
 type ActivityLog struct {
 	ID        int       `json:"id"`
 	UserID    int       `json:"userId"`
+	UserName  string    `json:"userName,omitempty"`
+	UserEmail string    `json:"userEmail,omitempty"`
 	Action    string    `json:"action"`
 	Details   string    `json:"details"`
 	CreatedAt time.Time `json:"createdAt"`

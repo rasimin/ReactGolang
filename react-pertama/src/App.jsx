@@ -14,6 +14,7 @@ import Transactions from '/src/Transactions.jsx';
 import Documentation from '/src/Documentation.jsx';
 import UserSecurity from '/src/UserSecurity.jsx';
 import ActiveUsers from '/src/ActiveUsers.jsx';
+import ActivityReport from '/src/ActivityReport.jsx';
 
 // --- Components ---
 
@@ -29,6 +30,7 @@ const MENU_ITEMS = [
     children: [
       { id: 'users', label: 'Users', icon: 'fa-solid fa-users' },
       { id: 'active-users', label: 'Active Sessions', icon: 'fa-solid fa-signal' },
+      { id: 'activity-report', label: 'Activity Report', icon: 'fa-solid fa-file-waveform' },
       { id: 'user-security', label: 'User Security', icon: 'fa-solid fa-user-lock' },
       { id: 'roles', label: 'Roles Access', icon: 'fa-solid fa-shield-halved' }
     ]
@@ -65,6 +67,7 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
   const [expandedMenus, setExpandedMenus] = useState({});
   const [hoveredMenu, setHoveredMenu] = useState(null); // { id: string, top: number }
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   // Auto-expand parent menu when activeMenu matches a child
   useEffect(() => {
@@ -131,17 +134,27 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
       className: 'flex-grow-1 overflow-auto custom-scrollbar',
       style: { margin: '0 -1rem', padding: '0 1rem' } // Compensate for parent padding to keep scrollbar at edge
     }, [
-      // Search Box
-      !isCollapsed && React.createElement('div', { key: 'search', className: 'mb-4 position-relative' }, [
-        React.createElement('i', { key: 'icon', className: 'fa-solid fa-magnifying-glass position-absolute top-50 start-0 translate-middle-y ms-3 text-muted small', style: { zIndex: 5 } }),
+      // Search Box (Animated)
+      !isCollapsed && React.createElement('div', { 
+        key: 'search', 
+        className: 'mb-4 search-container-modern',
+        style: {
+          width: isSearchFocused ? '100%' : '100%', 
+          maxWidth: isSearchFocused ? '100%' : '95%',
+          margin: '0 auto 1.5rem auto'
+        }
+      }, [
+        React.createElement('i', { key: 'icon', className: 'fa-solid fa-magnifying-glass text-muted small' }),
         React.createElement('input', {
           key: 'input',
           type: 'text',
-          className: 'form-control form-control-modern ps-5 py-2',
+          className: 'search-input-modern',
           placeholder: 'Search menu...',
           value: searchQuery,
           onChange: (e) => setSearchQuery(e.target.value),
-          style: { fontSize: '0.85rem', background: 'var(--bg-body)' }
+          onFocus: () => setIsSearchFocused(true),
+          onBlur: () => setIsSearchFocused(false),
+          style: { fontSize: '0.85rem' }
         })
       ]),
 
@@ -523,6 +536,10 @@ function DashboardContent({ activeMenu, showToast, updateUser, onLogout }) {
 
   if (activeMenu === 'active-users') {
     return React.createElement(ActiveUsers, { showToast, onLogout });
+  }
+
+  if (activeMenu === 'activity-report') {
+    return React.createElement(ActivityReport, { showToast });
   }
 
   if (activeMenu === 'user-security') {

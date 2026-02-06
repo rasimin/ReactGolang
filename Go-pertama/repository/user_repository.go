@@ -27,6 +27,7 @@ type UserRepository interface {
 	EmailExists(email string) (bool, error)
 	LogActivity(email, action, details string)
 	GetActivityLogs(userID int, limit int, offset int) ([]models.ActivityLog, error)
+	GetAllActivityLogs(limit, offset int, search string, userID int, startDate, endDate string) ([]models.ActivityLog, int, error)
 	UpdateLoginStatus(email string, isLoggedIn bool) error
 	GetActiveUsers() ([]models.User, error)
 }

@@ -127,8 +127,8 @@ export default function ActiveUsers({ showToast, onLogout }) {
                                 React.createElement('td', { className: 'ps-4', key: 'td-user' }, [
                                     React.createElement('div', { className: 'd-flex align-items-center' }, [
                                         React.createElement('div', { 
-                                            className: 'avatar-circle bg-primary text-white me-3 d-flex align-items-center justify-content-center',
-                                            style: { width: '40px', height: '40px', fontSize: '1.2rem' }
+                                            className: 'avatar-circle bg-primary text-white me-3',
+                                            style: { fontSize: '1.2rem' }
                                         }, (user.name || '?').charAt(0).toUpperCase()),
                                         React.createElement('div', {}, [
                                             React.createElement('div', { className: 'fw-bold' }, user.name || 'Unknown'),

@@ -4,6 +4,8 @@ const { useState } = React;
 export default function Documentation() {
   const [activeTag, setActiveTag] = useState('Authentication');
   const [expandedEndpoints, setExpandedEndpoints] = useState({});
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   const toggleEndpoint = (id) => {
     setExpandedEndpoints(prev => ({
@@ -346,23 +348,66 @@ export default function Documentation() {
     }
   };
 
+  const filteredDocs = React.useMemo(() => {
+    if (!searchTerm) return apiDocs;
+    return apiDocs.map(tag => {
+      const tagMatches = tag.tag.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchingEndpoints = tag.endpoints.filter(e => 
+        e.summary.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        e.path.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        e.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      
+      if (tagMatches || matchingEndpoints.length > 0) {
+        return {
+          ...tag,
+          endpoints: tagMatches ? tag.endpoints : matchingEndpoints
+        };
+      }
+      return null;
+    }).filter(Boolean);
+  }, [searchTerm, apiDocs]);
+
   return React.createElement('div', { className: 'd-flex h-100' }, [
     // Sidebar
     React.createElement('div', { 
       key: 'sidebar',
-      className: 'bg-white border-end h-100 flex-shrink-0 d-none d-md-block custom-scrollbar',
+      className: 'modern-card border-end h-100 flex-shrink-0 d-none d-md-block custom-scrollbar rounded-0',
       style: { width: '280px', overflowY: 'auto' }
     }, [
       React.createElement('div', { className: 'p-4 border-bottom' }, [
-        React.createElement('h5', { className: 'fw-bold mb-1' }, 'API Reference'),
-        React.createElement('small', { className: 'text-muted' }, 'v1.0.0')
+        React.createElement('div', { className: 'mb-3' }, [
+          React.createElement('h5', { className: 'fw-bold mb-1' }, 'API Reference'),
+          React.createElement('small', { className: 'text-muted' }, 'v1.0.0')
+        ]),
+        // Search Input with Animation
+        React.createElement('div', { 
+          className: 'search-container-modern',
+          style: { 
+            width: isSearchFocused ? '100%' : '85%', 
+            margin: '0 auto',
+            padding: '0.5rem 1rem' 
+          } 
+        }, [
+          React.createElement('i', { className: 'fa-solid fa-search text-muted small' }),
+          React.createElement('input', {
+            type: 'text',
+            className: 'search-input-modern',
+            placeholder: 'Search docs...',
+            value: searchTerm,
+            onChange: (e) => setSearchTerm(e.target.value),
+            onFocus: () => setIsSearchFocused(true),
+            onBlur: () => setIsSearchFocused(false)
+          })
+        ])
       ]),
       React.createElement('div', { className: 'list-group list-group-flush' },
-        apiDocs.map(tag => 
+        filteredDocs.map((tag, index) => 
           React.createElement('a', {
             key: tag.tag,
             href: '#',
-            className: `list-group-item list-group-item-action py-3 px-4 border-0 ${activeTag === tag.tag ? 'bg-primary bg-opacity-10 text-primary fw-bold border-end border-4 border-primary' : 'text-muted'}`,
+            className: `list-group-item list-group-item-action py-3 px-4 border-0 ${activeTag === tag.tag ? 'bg-primary bg-opacity-10 text-primary fw-bold border-end border-4 border-primary' : 'text-muted bg-transparent'} animate-fade-in`,
+            style: { animationDelay: `${index * 0.05}s` },
             onClick: (e) => {
               e.preventDefault();
               setActiveTag(tag.tag);
@@ -382,18 +427,18 @@ export default function Documentation() {
     // Main Content
     React.createElement('div', { 
       key: 'content',
-      className: 'flex-grow-1 h-100 overflow-auto custom-scrollbar bg-light p-4'
+      className: 'flex-grow-1 h-100 overflow-auto custom-scrollbar p-4'
     }, [
       React.createElement('div', { className: 'container-fluid mw-100', style: { maxWidth: '1000px' } }, [
         // Header
         React.createElement('div', { className: 'mb-5' }, [
           React.createElement('h2', { className: 'fw-bold mb-2' }, activeTag),
-          React.createElement('p', { className: 'text-muted lead' }, apiDocs.find(t => t.tag === activeTag)?.description)
+          React.createElement('p', { className: 'text-muted lead' }, filteredDocs.find(t => t.tag === activeTag)?.description)
         ]),
 
         // Endpoints List
         React.createElement('div', { className: 'd-flex flex-column gap-4' },
-          apiDocs.find(t => t.tag === activeTag)?.endpoints.map(endpoint => {
+          filteredDocs.find(t => t.tag === activeTag)?.endpoints.map(endpoint => {
             const isExpanded = expandedEndpoints[endpoint.id];
             const color = getMethodColor(endpoint.method);
 
@@ -407,7 +452,7 @@ export default function Documentation() {
             }, [
               // Endpoint Header (Clickable)
               React.createElement('div', {
-                className: 'd-flex align-items-center p-3 cursor-pointer hover-bg-light',
+                className: 'd-flex align-items-center p-3 cursor-pointer hover-modern',
                 onClick: () => toggleEndpoint(endpoint.id),
                 style: { cursor: 'pointer' }
               }, [
@@ -418,7 +463,7 @@ export default function Documentation() {
                 }, endpoint.method),
                 
                 // Path
-                React.createElement('span', { className: 'font-monospace fw-bold text-dark me-3 fs-6' }, endpoint.path),
+                React.createElement('span', { className: 'font-monospace fw-bold text-body me-3 fs-6' }, endpoint.path),
                 
                 // Summary
                 React.createElement('span', { className: 'text-muted small me-auto d-none d-sm-inline' }, endpoint.summary),
@@ -431,7 +476,7 @@ export default function Documentation() {
               ]),
 
               // Expanded Details
-              isExpanded && React.createElement('div', { className: 'border-top bg-white p-4 animate-fade-in' }, [
+              isExpanded && React.createElement('div', { className: 'border-top p-4 animate-fade-in' }, [
                 // Description
                 React.createElement('p', { className: 'text-muted mb-4' }, endpoint.description),
 
@@ -442,11 +487,11 @@ export default function Documentation() {
                     // Headers
                     endpoint.headers && React.createElement('div', { className: 'mb-4' }, [
                       React.createElement('h6', { className: 'fw-bold small text-uppercase text-muted mb-3' }, 'Headers'),
-                      React.createElement('div', { className: 'bg-light rounded-3 p-3 font-monospace small' },
+                      React.createElement('div', { className: 'bg-modern-subtle rounded-3 p-3 font-monospace small' },
                         Object.entries(endpoint.headers).map(([k, v]) => 
                           React.createElement('div', { key: k, className: 'd-flex' }, [
                             React.createElement('span', { className: 'text-danger me-2' }, `${k}:`),
-                            React.createElement('span', { className: 'text-dark' }, v)
+                            React.createElement('span', { className: 'text-body' }, v)
                           ])
                         )
                       )
@@ -494,7 +539,7 @@ export default function Documentation() {
                     endpoint.requestBody && React.createElement('div', { className: 'mb-4' }, [
                       React.createElement('h6', { className: 'fw-bold small text-uppercase text-muted mb-3' }, [
                         'Request Body',
-                        React.createElement('span', { className: 'badge bg-warning text-dark ms-2' }, 'JSON')
+                        React.createElement('span', { className: 'badge text-bg-warning ms-2' }, 'JSON')
                       ]),
                       React.createElement('div', { className: 'position-relative' },
                         React.createElement('pre', { className: 'bg-dark text-light p-3 rounded-3 small mb-0 overflow-auto custom-scrollbar', style: { maxHeight: '200px' } },
@@ -515,7 +560,7 @@ export default function Documentation() {
                               }, code),
                               React.createElement('span', { className: 'small text-muted' }, code.startsWith('2') ? 'Success' : 'Error')
                             ]),
-                            React.createElement('pre', { className: 'bg-light border p-3 rounded-3 small mb-0 overflow-auto custom-scrollbar text-dark', style: { maxHeight: '200px' } },
+                            React.createElement('pre', { className: 'bg-modern-subtle border p-3 rounded-3 small mb-0 overflow-auto custom-scrollbar text-body', style: { maxHeight: '200px' } },
                               JSON.stringify(body, null, 2)
                             )
                           ])

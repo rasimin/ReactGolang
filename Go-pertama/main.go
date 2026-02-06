@@ -290,6 +290,7 @@ func main() {
 	// User Routes
 	mux.HandleFunc("/api/profile", middleware.EnableCORS(authMiddleware(userHandler.GetProfile)))
 	mux.HandleFunc("/api/profile/activity", middleware.EnableCORS(authMiddleware(userHandler.GetActivityLogs)))
+	mux.HandleFunc("/api/activity-logs", middleware.EnableCORS(authMiddleware(userHandler.GetSystemActivityLogs)))
 	mux.HandleFunc("/api/users/active", middleware.EnableCORS(authMiddleware(userHandler.GetActiveUsers)))
 	mux.HandleFunc("/api/users/kick", middleware.EnableCORS(authMiddleware(userHandler.KickUser)))
 	mux.HandleFunc("/api/users", middleware.EnableCORS(authMiddleware(func(w http.ResponseWriter, r *http.Request) {

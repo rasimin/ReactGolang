@@ -212,11 +212,11 @@ function Profile({ showToast, onProfileUpdate }) {
         return React.createElement('div', { className: 'alert alert-danger' }, 'Could not load profile data.');
     }
 
-    return React.createElement('div', { className: 'container-fluid p-4 animate-fade-in position-relative' },
+    return React.createElement('div', { className: 'container-fluid p-4 position-relative' },
         // Modal Overlay
         showConfirmModal && React.createElement('div', {
             className: 'position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center',
-            style: { backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }
+            style: { backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 2000 }
         },
             React.createElement('div', { className: 'modern-card p-4 shadow-lg animate-fade-in', style: { maxWidth: '400px', width: '90%' } }, [
                 React.createElement('div', { className: 'text-center mb-4' }, [
@@ -241,14 +241,16 @@ function Profile({ showToast, onProfileUpdate }) {
             ])
         ),
 
-        // Page Header
-        React.createElement('div', { className: 'mb-4' },
-            React.createElement('h2', { className: 'fw-bold mb-1' }, 'My Profile'),
-            React.createElement('p', { className: 'text-muted' }, 'Manage your personal information and account settings.')
-        ),
+        // Main Content Wrapper (Animated)
+        React.createElement('div', { className: 'animate-fade-in' }, [
+            // Page Header
+            React.createElement('div', { className: 'mb-4' },
+                React.createElement('h2', { className: 'fw-bold mb-1' }, 'My Profile'),
+                React.createElement('p', { className: 'text-muted' }, 'Manage your personal information and account settings.')
+            ),
 
-        React.createElement('div', { className: 'row g-4' }, [
-            // Hero Card (Horizontal Layout)
+            React.createElement('div', { className: 'row g-4' }, [
+                // Hero Card (Horizontal Layout)
             React.createElement('div', { key: 'hero', className: 'col-12' },
                 React.createElement('div', { className: 'modern-card p-4 border-0 shadow-sm' }, 
                     React.createElement('div', { className: 'd-flex flex-column flex-md-row align-items-center align-items-md-start gap-4' }, [
@@ -484,7 +486,7 @@ function Profile({ showToast, onProfileUpdate }) {
                 ])
             )
         ])
-    );
+    ]));
 }
 
 export default Profile;

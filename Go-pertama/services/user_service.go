@@ -25,6 +25,7 @@ type UserService interface {
 	GetActiveUsers() ([]models.User, error)
 	KickUser(email string, kickedBy string) error
 	GetActivityLogs(email string, limit int, offset int) ([]models.ActivityLog, error)
+	GetAllActivityLogs(page, limit int, search string, userID int, startDate, endDate string) ([]models.ActivityLog, int, error)
 }
 
 type userService struct {
@@ -176,5 +177,9 @@ func (s *userService) GetAvatarByID(id int) ([]byte, string, error) {
 }
 
 func (s *userService) RemoveAvatar(email string) error {
-	return s.repo.RemoveAvatar(email)
+	err := s.repo.RemoveAvatar(email)
+	if err == nil {
+		s.repo.LogActivity(email, "REMOVE_AVATAR", "Removed avatar")
+	}
+	return err
 }

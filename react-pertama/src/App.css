@@ -57,6 +57,7 @@ body.dark {
 }
 
 body {
+  color-scheme: light;
   font-family: var(--font-family);
   background-color: var(--bg-body);
   color: var(--text-main);
@@ -411,6 +412,70 @@ body.dark .form-switch .form-check-input:checked {
   align-items: center;
   box-shadow: var(--shadow-sm);
   width: 220px;
+  height: 42px; /* Fixed height for consistency */
+}
+
+/* Compact Filter Controls */
+.form-control-compact,
+.form-select-compact {
+  background: var(--bg-body);
+  border: 1px solid var(--border-color);
+  border-radius: 50px;
+  padding: 0.4rem 1rem;
+  height: 42px;
+  font-size: 0.9rem;
+  color: var(--text-main);
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.form-select-compact {
+  padding-right: 2.5rem; /* Space for arrow */
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.8rem center;
+  background-size: 1rem;
+}
+
+.form-control-compact:focus,
+.form-select-compact:focus {
+  background: var(--bg-card);
+  border-color: #6366f1;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+  outline: none;
+}
+
+body.dark .form-control-compact,
+body.dark .form-select-compact {
+  background-color: rgba(30, 41, 59, 0.7);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+}
+
+body.dark .form-control-compact:focus,
+body.dark .form-select-compact:focus {
+  background-color: rgba(30, 41, 59, 1);
+  border-color: #818cf8;
+}
+
+body.dark .form-select-compact {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+}
+
+/* Date Input Fix for Compact */
+.form-control-compact[type="date"] {
+  padding-right: 0.5rem; /* Less padding on right for date icon */
+}
+
+/* Dark Mode Date Input - Modern Native Picker */
+body.dark .form-control-compact[type="date"] {
+  color-scheme: dark;
+}
+
+body.dark .form-control-compact[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.8;
+  cursor: pointer;
 }
 
 .search-container-modern:focus-within {
@@ -823,6 +888,15 @@ body.dark .bg-modern-subtle {
   transition: all 0.3s ease;
 }
 
+.hover-modern {
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.hover-modern:hover {
+  background-color: var(--hover-bg);
+  color: var(--hover-text);
+}
+
 body.dark .modern-card {
   background-color: var(--bg-card);
   border-color: var(--border-color);
@@ -997,4 +1071,29 @@ body.dark .custom-select-options::-webkit-scrollbar-thumb {
     font-size: 0.9rem;
     border-radius: 50px; /* Match search bar radius */
     background-position: right 0.8rem center; /* Adjust arrow position */
+    height: 42px; /* Ensure match with search bar */
+}
+
+/* Avatar Styling */
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.avatar-circle-sm {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
 }
