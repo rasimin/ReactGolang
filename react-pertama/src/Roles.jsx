@@ -12,7 +12,7 @@ export default function Roles({ showToast }) {
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
   const [totalPages, setTotalPages] = useState(0);
   const [totalRoles, setTotalRoles] = useState(0);
   

@@ -93,34 +93,35 @@ export default function ActiveUsers({ showToast, onLogout }) {
         );
     }
 
-    return React.createElement('div', { className: 'container-fluid p-4 animate-fade-in' }, [
-        React.createElement('div', { key: 'header', className: 'd-flex justify-content-between align-items-center mb-4' }, [
-            React.createElement('div', { key: 'title' }, [
-                React.createElement('h2', { className: 'fw-bold mb-1' }, 'Active Sessions'),
-                React.createElement('p', { className: 'text-muted mb-0' }, 'Monitor and manage currently logged-in users.')
+    return React.createElement('div', { className: 'modern-card p-4 animate-fade-in' }, [
+        // Header & Actions Combined
+        React.createElement('div', { key: 'header', className: 'd-flex flex-wrap gap-3 justify-content-between align-items-center mb-4' }, [
+            React.createElement('div', { key: 'title-section' }, [
+                React.createElement('h5', { className: 'fw-bold mb-0' }, 'Active Sessions'),
+                React.createElement('p', { className: 'text-muted small mb-0' }, 'Monitor and manage currently logged-in users.')
             ]),
             React.createElement('button', {
                 key: 'refresh',
-                className: 'btn btn-modern-light',
+                className: 'btn btn-modern-light btn-sm d-flex align-items-center gap-2',
                 onClick: fetchActiveUsers
             }, [
-                React.createElement('i', { className: 'fa-solid fa-rotate-right me-2', key: 'icon' }),
+                React.createElement('i', { className: 'fa-solid fa-rotate-right', key: 'icon' }),
                 'Refresh'
             ])
         ]),
 
-        React.createElement('div', { key: 'card', className: 'modern-card' }, [
-            React.createElement('div', { key: 'table-responsive', className: 'table-responsive' }, 
-                React.createElement('table', { className: 'table table-hover align-middle mb-0' }, [
-                    React.createElement('thead', { key: 'thead', className: 'bg-modern-subtle' }, 
-                        React.createElement('tr', {}, [
-                            React.createElement('th', { className: 'ps-4', key: 'th-user' }, 'User'),
-                            React.createElement('th', { key: 'th-role' }, 'Role'),
-                            React.createElement('th', { key: 'th-time' }, 'Login Time'),
-                            React.createElement('th', { className: 'text-end pe-4', key: 'th-actions' }, 'Actions')
-                        ])
-                    ),
-                    React.createElement('tbody', { key: 'tbody' }, 
+        // Table Container
+        React.createElement('div', { key: 'table-container', className: 'table-responsive' }, 
+            React.createElement('table', { className: 'table table-modern table-hover align-middle mb-0' }, [
+                React.createElement('thead', { key: 'thead', className: 'bg-modern-subtle' }, 
+                    React.createElement('tr', {}, [
+                        React.createElement('th', { className: 'ps-4', key: 'th-user' }, 'User'),
+                        React.createElement('th', { key: 'th-role' }, 'Role'),
+                        React.createElement('th', { key: 'th-time' }, 'Login Time'),
+                        React.createElement('th', { className: 'text-end pe-4', key: 'th-actions' }, 'Actions')
+                    ])
+                ),
+                React.createElement('tbody', { key: 'tbody' }, 
                         users.length > 0 ? users.map(user => 
                             React.createElement('tr', { key: user.email }, [
                                 React.createElement('td', { className: 'ps-4', key: 'td-user' }, [
@@ -156,9 +157,7 @@ export default function ActiveUsers({ showToast, onLogout }) {
                         )
                     )
                 ])
-            )
-        ]),
-
+            ),
         // Kick Confirmation Modal
         showKickModal && window.ReactDOM.createPortal(
             React.createElement('div', { className: 'modal fade show d-block', style: { backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }, tabIndex: '-1' },

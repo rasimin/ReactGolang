@@ -12,9 +12,37 @@ function Profile({ showToast, onProfileUpdate }) {
     const [activityLogs, setActivityLogs] = useState([]);
     const [hasMoreLogs, setHasMoreLogs] = useState(true);
     const [loadingLogs, setLoadingLogs] = useState(false);
+    const [itemsPerPage, setItemsPerPage] = useState(10); // Default to 10
     
     // Observer ref to persist across renders
     const observer = useRef();
+
+    // Fetch Config for Pagination Limit
+    useEffect(() => {
+        const fetchConfig = async () => {
+            try {
+                const response = await fetch(`${config.api.baseUrl}/api/configs`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const configList = data.data || (Array.isArray(data) ? data : []);
+                    const paginationConfig = configList.find(c => c.configKey === 'pagination_limit');
+                    if (paginationConfig) {
+                        const limit = parseInt(paginationConfig.mainValue, 10);
+                        if (!isNaN(limit) && limit > 0) {
+                            setItemsPerPage(limit);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching pagination config:", err);
+            }
+        };
+        fetchConfig();
+    }, []);
 
     // Fetch Logs Function - Wrapped in useCallback
     const fetchLogs = useCallback(async (offset) => {
@@ -22,7 +50,7 @@ function Profile({ showToast, onProfileUpdate }) {
         setLoadingLogs(true);
         
         try {
-            const response = await fetch(`${config.api.baseUrl}/api/profile/activity?limit=10&offset=${offset}`, {
+            const response = await fetch(`${config.api.baseUrl}/api/profile/activity?limit=${itemsPerPage}&offset=${offset}`, {
                 headers: {
                     'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
                 }
@@ -42,7 +70,7 @@ function Profile({ showToast, onProfileUpdate }) {
                     });
                 }
                 
-                if (newLogs.length < 10) {
+                if (newLogs.length < itemsPerPage) {
                     setHasMoreLogs(false);
                 }
             } else {
@@ -53,12 +81,14 @@ function Profile({ showToast, onProfileUpdate }) {
         } finally {
             setLoadingLogs(false);
         }
-    }, [loadingLogs]);
+    }, [loadingLogs, itemsPerPage]);
 
-    // Initial Fetch for Logs
+    // Initial Fetch for Logs (Re-fetch when itemsPerPage changes)
     useEffect(() => {
+        setActivityLogs([]);
+        setHasMoreLogs(true);
         fetchLogs(0);
-    }, []);
+    }, [itemsPerPage]);
 
     // Infinite Scroll Observer Callback Ref (replaces observerTarget)
     const observerTarget = useCallback(node => {

@@ -14,7 +14,34 @@ export default function UserSecurity({ showToast }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  
+  // Fetch system configs for pagination limit
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch(`${config.api.baseUrl}/api/configs`, {
+          headers: {
+            'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const configList = data.data || (Array.isArray(data) ? data : []);
+          const paginationConfig = configList.find(c => c.configKey === 'pagination_limit');
+          if (paginationConfig) {
+            const limit = parseInt(paginationConfig.mainValue, 10);
+            if (!isNaN(limit) && limit > 0) {
+              setItemsPerPage(limit);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching pagination config:', error);
+      }
+    };
+    fetchConfig();
+  }, []);
   
   // Modal State
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -72,7 +99,7 @@ export default function UserSecurity({ showToast }) {
 
   useEffect(() => {
     fetchUsers();
-  }, [currentPage, searchQuery, statusFilter]);
+  }, [currentPage, searchQuery, statusFilter, itemsPerPage]);
 
   const openResetCounterModal = (user) => {
     setUserToResetCounter(user);
@@ -165,29 +192,17 @@ export default function UserSecurity({ showToast }) {
     );
   }
 
-  return React.createElement('div', { className: 'container-fluid p-4 animate-fade-in' }, [
-    // Header
-    React.createElement('div', { key: 'header', className: 'd-flex justify-content-between align-items-center mb-4' }, [
-      React.createElement('div', null, [
-        React.createElement('h2', { className: 'fw-bold text-body mb-1' }, 'User Security'),
-        React.createElement('p', { className: 'text-muted mb-0' }, 'Manage passwords and login security')
-      ])
-    ]),
-
-    // Filters
-    React.createElement('div', { key: 'filters', className: 'card modern-card border-0 shadow-sm mb-4' },
-      React.createElement('div', { className: 'card-body p-3' },
-        React.createElement('div', { className: 'row g-3 align-items-center' }, [
-          // Search
-          React.createElement('div', { key: 'search', className: 'col-md-4' },
-            React.createElement(SearchInput, {
-              value: searchQuery,
-              onChange: handleSearchChange,
-              placeholder: "Search users..."
-            })
-          ),
-          // Status Filter
-          React.createElement('div', { key: 'status', className: 'col-md-3' },
+  return React.createElement('div', { className: 'modern-card p-4 animate-fade-in' }, [
+    // Header & Filters Combined
+    React.createElement('div', { key: 'header', className: 'd-flex flex-wrap gap-3 justify-content-between align-items-center mb-4' }, [
+      React.createElement('div', { key: 'title-section' }, [
+          React.createElement('h5', { className: 'fw-bold mb-0' }, 'User Security'),
+          React.createElement('p', { className: 'text-muted small mb-0' }, 'Manage passwords and login security')
+      ]),
+      
+      React.createElement('div', { key: 'actions', className: 'd-flex gap-3 align-items-center flex-wrap' }, [
+        // Status Filter
+        React.createElement('div', { key: 'status', style: { minWidth: '150px' } },
             React.createElement(CustomSelect, {
                 options: [
                     { value: 'all', label: 'All Status' },
@@ -199,17 +214,21 @@ export default function UserSecurity({ showToast }) {
                 placeholder: "Filter Status",
                 compact: true
             })
-          )
-        ])
-      )
-    ),
+        ),
+        // Search
+        React.createElement(SearchInput, {
+            key: 'search',
+            value: searchQuery,
+            onChange: handleSearchChange,
+            placeholder: "Search users..."
+        })
+      ])
+    ]),
 
     // Table
-    React.createElement('div', { key: 'table-card', className: 'card modern-card border-0 shadow-sm' }, [
-      React.createElement('div', { className: 'card-body p-0' },
-        React.createElement('div', { className: 'table-responsive' },
-          React.createElement('table', { className: 'table table-hover align-middle mb-0' }, [
-            React.createElement('thead', { className: 'bg-modern-subtle' },
+    React.createElement('div', { key: 'table-container', className: 'table-responsive' },
+      React.createElement('table', { className: 'table table-modern table-hover align-middle mb-0' }, [
+        React.createElement('thead', { className: 'bg-modern-subtle' },
               React.createElement('tr', null, [
                 React.createElement('th', { className: 'ps-4 py-3 text-secondary' }, 'User'),
                 React.createElement('th', { className: 'py-3 text-secondary' }, 'Role'),
@@ -283,22 +302,19 @@ export default function UserSecurity({ showToast }) {
                 )
               )
             )
-          ])
-        )
+        ])
       ),
       // Pagination
-      React.createElement('div', { className: 'card-footer bg-transparent border-top-0 py-3' },
-        React.createElement(Pagination, {
-            currentPage: currentPage,
-            totalPages: totalPages,
-            totalItems: totalUsers,
-            itemsPerPage: itemsPerPage,
-            indexOfFirstItem: indexOfFirstItem,
-            indexOfLastItem: indexOfLastItem,
-            onPageChange: setCurrentPage
-        })
-      )
-    ]),
+      React.createElement(Pagination, {
+          key: 'pagination',
+          currentPage: currentPage,
+          totalPages: totalPages,
+          totalItems: totalUsers,
+          itemsPerPage: itemsPerPage,
+          indexOfFirstItem: indexOfFirstItem,
+          indexOfLastItem: indexOfLastItem,
+          onPageChange: setCurrentPage
+      }),
 
     // Password Reset Modal
     showPasswordModal && window.ReactDOM.createPortal(

@@ -904,6 +904,20 @@ body.dark .table-modern thead th {
   border-color: var(--border-color);
 }
 
+/* Fix for Grid/Table Rounded Corners in Modern Cards */
+.modern-card .table thead th:first-child {
+  border-top-left-radius: 1rem;
+}
+
+.modern-card .table thead th:last-child {
+  border-top-right-radius: 1rem;
+}
+
+/* Ensure thead inside modern-card doesn't have a square border */
+.modern-card .table thead.bg-modern-subtle {
+  border: none;
+}
+
 /* Custom Select Options Truncation Fix & Styling */
 .custom-select-trigger {
     background-image: none !important; /* Fix double arrow issue */

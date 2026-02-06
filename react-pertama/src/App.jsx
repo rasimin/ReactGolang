@@ -66,6 +66,14 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
   const [hoveredMenu, setHoveredMenu] = useState(null); // { id: string, top: number }
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Auto-expand parent menu when activeMenu matches a child
+  useEffect(() => {
+    const parent = MENU_ITEMS.find(item => item.children?.some(child => child.id === activeMenu));
+    if (parent) {
+      setExpandedMenus(prev => ({ ...prev, [parent.id]: true }));
+    }
+  }, [activeMenu]);
+
   const toggleSubmenu = (id) => {
     setExpandedMenus(prev => ({
       ...prev,
@@ -197,7 +205,7 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
                     React.createElement('li', { key: child.id, className: 'nav-item' },
                       React.createElement('a', {
                         href: '#',
-                        className: `nav-link-modern py-2 small ${activeMenu === child.id ? 'text-primary fw-bold' : 'text-muted'}`,
+                        className: `nav-link-modern py-2 small ${activeMenu === child.id ? 'active' : 'text-muted'}`,
                         onClick: (e) => {
                           e.preventDefault();
                           setActiveMenu(child.id);
@@ -225,7 +233,7 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
                   React.createElement('li', { key: child.id, className: 'nav-item' },
                     React.createElement('a', {
                       href: '#',
-                      className: `nav-link-modern py-2 small ${activeMenu === child.id ? 'text-primary fw-bold' : ''}`,
+                      className: `nav-link-modern py-2 small ${activeMenu === child.id ? 'active' : ''}`,
                       onClick: (e) => {
                         e.preventDefault();
                         setActiveMenu(child.id);

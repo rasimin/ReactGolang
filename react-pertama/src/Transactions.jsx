@@ -11,7 +11,34 @@ export default function Transactions({ showToast }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [workspaceFilter, setWorkspaceFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Fetch system configs for pagination limit
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch(`${config.api.baseUrl}/api/configs`, {
+          headers: {
+            'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const configList = data.data || (Array.isArray(data) ? data : []);
+          const paginationConfig = configList.find(c => c.configKey === 'pagination_limit');
+          if (paginationConfig) {
+            const limit = parseInt(paginationConfig.mainValue, 10);
+            if (!isNaN(limit) && limit > 0) {
+              setItemsPerPage(limit);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching pagination config:', error);
+      }
+    };
+    fetchConfig();
+  }, []);
 
   // Mock Data
   useEffect(() => {
