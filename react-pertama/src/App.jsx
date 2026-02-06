@@ -17,9 +17,54 @@ import ActiveUsers from '/src/ActiveUsers.jsx';
 
 // --- Components ---
 
+const MENU_ITEMS = [
+  { id: 'dashboard', label: 'Dashboard', icon: 'fa-solid fa-gauge' },
+  { id: 'workspaces', label: 'Workspaces', icon: 'fa-solid fa-building' },
+  { id: 'transactions', label: 'Transactions', icon: 'fa-solid fa-money-bill-transfer' },
+  
+  {
+    id: 'user-management',
+    label: 'User Management',
+    icon: 'fa-solid fa-users-gear',
+    children: [
+      { id: 'users', label: 'Users', icon: 'fa-solid fa-users' },
+      { id: 'active-users', label: 'Active Sessions', icon: 'fa-solid fa-signal' },
+      { id: 'user-security', label: 'User Security', icon: 'fa-solid fa-user-lock' },
+      { id: 'roles', label: 'Roles Access', icon: 'fa-solid fa-shield-halved' }
+    ]
+  },
+
+  { 
+    id: 'settings', 
+    label: 'Settings', 
+    icon: 'fa-solid fa-gear',
+    children: [
+      { id: 'config', label: 'Config', icon: 'fa-solid fa-sliders' }
+    ]
+  },
+  { id: 'changelog', label: 'Change Log', icon: 'fa-solid fa-code-branch' },
+  { id: 'docs', label: 'Documentation', icon: 'fa-solid fa-book' },
+  { id: 'support', label: 'Support', icon: 'fa-solid fa-headset' },
+  { id: 'logs', label: 'System Logs', icon: 'fa-solid fa-file-code' }
+];
+
+function getMenuPath(items, activeId, path = []) {
+  for (const item of items) {
+    if (item.id === activeId) {
+      return [...path, item.label];
+    }
+    if (item.children) {
+      const childPath = getMenuPath(item.children, activeId, [...path, item.label]);
+      if (childPath) return childPath;
+    }
+  }
+  return null;
+}
+
 function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
   const [expandedMenus, setExpandedMenus] = useState({});
   const [hoveredMenu, setHoveredMenu] = useState(null); // { id: string, top: number }
+  const [searchQuery, setSearchQuery] = useState('');
 
   const toggleSubmenu = (id) => {
     setExpandedMenus(prev => ({
@@ -28,28 +73,35 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
     }));
   };
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'fa-solid fa-gauge' },
-    { id: 'workspaces', label: 'Workspaces', icon: 'fa-solid fa-building' },
-    { id: 'transactions', label: 'Transactions', icon: 'fa-solid fa-money-bill-transfer' },
-    { id: 'users', label: 'Users', icon: 'fa-solid fa-users' },
-    { id: 'active-users', label: 'Active Sessions', icon: 'fa-solid fa-signal' },
-    { id: 'user-security', label: 'User Security', icon: 'fa-solid fa-user-lock' },
-    { id: 'roles', label: 'Roles Access', icon: 'fa-solid fa-shield-halved' },
+  const menuItems = MENU_ITEMS;
 
-    { 
-      id: 'settings', 
-      label: 'Settings', 
-      icon: 'fa-solid fa-gear',
-      children: [
-        { id: 'config', label: 'Config', icon: 'fa-solid fa-sliders' }
-      ]
-    },
-    { id: 'changelog', label: 'Change Log', icon: 'fa-solid fa-code-branch' },
-    { id: 'docs', label: 'Documentation', icon: 'fa-solid fa-book' },
-    { id: 'support', label: 'Support', icon: 'fa-solid fa-headset' },
-    { id: 'logs', label: 'System Logs', icon: 'fa-solid fa-file-code' }
-  ];
+  const filteredMenuItems = React.useMemo(() => {
+    if (!searchQuery) return menuItems;
+    const lowerQuery = searchQuery.toLowerCase();
+    
+    return menuItems.map(item => {
+      const parentMatches = item.label.toLowerCase().includes(lowerQuery);
+      const filteredChildren = item.children 
+        ? item.children.filter(child => child.label.toLowerCase().includes(lowerQuery))
+        : [];
+      
+      if (parentMatches) return item;
+      if (filteredChildren.length > 0) return { ...item, children: filteredChildren };
+      return null;
+    }).filter(Boolean);
+  }, [searchQuery, menuItems]);
+
+  useEffect(() => {
+    if (searchQuery) {
+      const newExpanded = {};
+      filteredMenuItems.forEach(item => {
+        if (item.children && item.children.length > 0) {
+          newExpanded[item.id] = true;
+        }
+      });
+      setExpandedMenus(prev => ({ ...prev, ...newExpanded }));
+    }
+  }, [searchQuery, filteredMenuItems]);
 
   return React.createElement('div', { 
     className: `offcanvas-lg offcanvas-start sidebar-modern ${isCollapsed ? 'collapsed p-3' : 'p-4'}`, 
@@ -71,10 +123,24 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
       className: 'flex-grow-1 overflow-auto custom-scrollbar',
       style: { margin: '0 -1rem', padding: '0 1rem' } // Compensate for parent padding to keep scrollbar at edge
     }, [
+      // Search Box
+      !isCollapsed && React.createElement('div', { key: 'search', className: 'mb-4 position-relative' }, [
+        React.createElement('i', { key: 'icon', className: 'fa-solid fa-magnifying-glass position-absolute top-50 start-0 translate-middle-y ms-3 text-muted small', style: { zIndex: 5 } }),
+        React.createElement('input', {
+          key: 'input',
+          type: 'text',
+          className: 'form-control form-control-modern ps-5 py-2',
+          placeholder: 'Search menu...',
+          value: searchQuery,
+          onChange: (e) => setSearchQuery(e.target.value),
+          style: { fontSize: '0.85rem', background: 'var(--bg-body)' }
+        })
+      ]),
+
       !isCollapsed && React.createElement('div', { key: 'section-title', className: 'text-uppercase text-muted small fw-bold mb-3', style: { fontSize: '0.75rem' } }, 'Main Menu'),
 
       React.createElement('ul', { key: 'nav', className: 'nav flex-column mb-auto' }, 
-        menuItems.map(item => {
+        filteredMenuItems.map(item => {
           const hasChildren = item.children && item.children.length > 0;
           const isExpanded = expandedMenus[item.id];
           const isActive = activeMenu === item.id || (hasChildren && item.children.some(child => child.id === activeMenu));
@@ -198,7 +264,7 @@ function Sidebar({ activeMenu, setActiveMenu, isCollapsed }) {
   ]);
 }
 
-function Header({ title, onLogout, isDarkMode, toggleTheme, toggleSidebar, setActiveMenu, togglePasswordModal, user }) {
+function Header({ title, breadcrumbs, onLogout, isDarkMode, toggleTheme, toggleSidebar, setActiveMenu, togglePasswordModal, user }) {
   // Dummy Notification Data
   const notifications = [
     { id: 1, title: 'New Order #1023', time: '5m ago', icon: 'fa-box', color: 'primary', unread: true },
@@ -233,7 +299,17 @@ function Header({ title, onLogout, isDarkMode, toggleTheme, toggleSidebar, setAc
 
       React.createElement('div', { key: 'title-wrapper' }, [
         React.createElement('h5', { key: 'h5', className: 'mb-0 fw-bold' }, title),
-        React.createElement('small', { key: 'small', className: 'text-muted' }, 'Overview of your project')
+        breadcrumbs && breadcrumbs.length > 0 
+          ? React.createElement('div', { key: 'breadcrumbs', className: 'd-flex align-items-center text-muted small mt-1', style: { fontSize: '0.75rem' } }, 
+              breadcrumbs.map((item, index) => [
+                index > 0 && React.createElement('i', { key: `sep-${index}`, className: 'fa-solid fa-chevron-right mx-2 text-muted', style: { fontSize: '0.6rem', opacity: 0.5 } }),
+                React.createElement('span', { 
+                  key: `item-${index}`, 
+                  className: index === breadcrumbs.length - 1 ? 'text-primary fw-medium' : '' 
+                }, item)
+              ])
+            )
+          : React.createElement('small', { key: 'small', className: 'text-muted' }, 'Overview of your project')
       ]),
       
       React.createElement('button', {
@@ -492,7 +568,8 @@ function DashboardLayout({ onLogout, isDarkMode, toggleTheme, togglePasswordModa
     }, [
       React.createElement(Header, { 
         key: 'header', 
-        title: activeMenu.charAt(0).toUpperCase() + activeMenu.slice(1), 
+        title: (getMenuPath(MENU_ITEMS, activeMenu) || [activeMenu.charAt(0).toUpperCase() + activeMenu.slice(1)]).slice(-1)[0],
+        breadcrumbs: getMenuPath(MENU_ITEMS, activeMenu) || [activeMenu.charAt(0).toUpperCase() + activeMenu.slice(1)],
         onLogout: onLogout,
         isDarkMode: isDarkMode,
         toggleTheme: toggleTheme,
