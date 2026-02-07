@@ -13,9 +13,9 @@ import (
 
 type UserService interface {
 	GetAll(page, limit int, search string, roleID int) (*models.UsersResponse, error)
-	Create(req models.CreateUserRequest, creatorEmail string) error
-	Update(req models.UpdateUserRequest, updaterEmail string) error
-	Delete(id int, deleterEmail string) error
+	Create(req models.CreateUserRequest, creatorEmail, creatorName string) error
+	Update(req models.UpdateUserRequest, updaterEmail, updaterName string) error
+	Delete(id int, deleterEmail, deleterName string) error
 	UploadProfilePicture(email string, file multipart.File, header *multipart.FileHeader) error
 	GetAvatar(email string) ([]byte, string, error)
 	GetAvatarByID(id int) ([]byte, string, error)
@@ -27,6 +27,7 @@ type UserService interface {
 	GetActivityLogs(email string, limit int, offset int) ([]models.ActivityLog, error)
 	GetAllActivityLogs(page, limit int, search string, userID int, startDate, endDate string) ([]models.ActivityLog, int, error)
 	ExportActivityLogs(search string, userID int, startDate, endDate string) ([]byte, error)
+	GetUserHistory(userID int) ([]models.UserHistory, error)
 }
 
 type userService struct {
@@ -35,6 +36,10 @@ type userService struct {
 
 func NewUserService(repo repository.UserRepository) UserService {
 	return &userService{repo: repo}
+}
+
+func (s *userService) GetUserHistory(userID int) ([]models.UserHistory, error) {
+	return s.repo.GetUserHistory(userID)
 }
 
 func (s *userService) ResetFailedAttempts(id int, updatedBy string) error {
@@ -82,7 +87,7 @@ func (s *userService) GetAll(page, limit int, search string, roleID int) (*model
 	}, nil
 }
 
-func (s *userService) Create(req models.CreateUserRequest, creatorEmail string) error {
+func (s *userService) Create(req models.CreateUserRequest, creatorEmail, creatorName string) error {
 	exists, _ := s.repo.EmailExists(req.Email)
 	if exists {
 		return errors.New("email already exists")
@@ -94,12 +99,13 @@ func (s *userService) Create(req models.CreateUserRequest, creatorEmail string) 
 	}
 
 	user := &models.User{
-		Email:    req.Email,
-		Password: string(hashedPassword),
-		Name:     req.Name,
-		Role:     req.Role,
-		RoleID:   req.RoleID,
-		IsActive: req.IsActive,
+		Email:     req.Email,
+		Password:  string(hashedPassword),
+		Name:      req.Name,
+		Role:      req.Role,
+		RoleID:    req.RoleID,
+		IsActive:  req.IsActive,
+		CreatedBy: creatorName,
 	}
 
 	err = s.repo.Create(user)
@@ -109,14 +115,15 @@ func (s *userService) Create(req models.CreateUserRequest, creatorEmail string) 
 	return err
 }
 
-func (s *userService) Update(req models.UpdateUserRequest, updaterEmail string) error {
+func (s *userService) Update(req models.UpdateUserRequest, updaterEmail, updaterName string) error {
 	user := &models.User{
-		ID:       req.ID,
-		Email:    req.Email,
-		Name:     req.Name,
-		Role:     req.Role,
-		RoleID:   req.RoleID,
-		IsActive: req.IsActive,
+		ID:        req.ID,
+		Email:     req.Email,
+		Name:      req.Name,
+		Role:      req.Role,
+		RoleID:    req.RoleID,
+		IsActive:  req.IsActive,
+		UpdatedBy: updaterName,
 	}
 
 	err := s.repo.Update(user)
@@ -139,8 +146,8 @@ func (s *userService) Update(req models.UpdateUserRequest, updaterEmail string) 
 	return nil
 }
 
-func (s *userService) Delete(id int, deleterEmail string) error {
-	err := s.repo.Delete(id)
+func (s *userService) Delete(id int, deleterEmail, deleterName string) error {
+	err := s.repo.Delete(id, deleterName)
 	if err == nil {
 		s.repo.LogActivity(deleterEmail, "DELETE_USER", fmt.Sprintf("Deleted user ID %d", id))
 	}

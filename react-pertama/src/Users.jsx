@@ -16,6 +16,9 @@ export default function Users({ showToast }) {
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [historyLogs, setHistoryLogs] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [modalMode, setModalMode] = useState('add'); // 'add' or 'edit'
   const [currentPage, setCurrentPage] = useState(1);
@@ -191,6 +194,34 @@ export default function Users({ showToast }) {
     }
   };
 
+  const fetchHistory = async (userId) => {
+    setLoadingHistory(true);
+    try {
+      const response = await fetch(`${config.api.baseUrl}/api/users/history?id=${userId}`, {
+        headers: {
+          'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setHistoryLogs(data || []);
+      } else {
+        throw new Error('Failed to fetch history');
+      }
+    } catch (err) {
+      console.error("Fetch history error:", err);
+      if (showToast) showToast("Failed to fetch history", 'error');
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const openHistoryModal = (user) => {
+    setHistoryLogs([]);
+    setShowHistoryModal(true);
+    fetchHistory(user.id);
+  };
+
   const openAddModal = () => {
     setModalMode('add');
     setCurrentUser({
@@ -270,6 +301,8 @@ export default function Users({ showToast }) {
               React.createElement('th', { key: 'role' }, 'Role'),
               React.createElement('th', { key: 'status' }, 'Status'),
               React.createElement('th', { key: 'failed' }, 'Failed Attempts'),
+              React.createElement('th', { key: 'createdBy' }, 'Created By'),
+              React.createElement('th', { key: 'updatedBy' }, 'Updated By'),
               React.createElement('th', { key: 'actions', className: 'text-end' }, 'Actions'),
             ]))
           ),
@@ -305,8 +338,15 @@ export default function Users({ showToast }) {
                             ? React.createElement('span', { className: `badge ${user.failedLoginAttempts >= 3 ? 'bg-danger' : 'bg-warning text-dark'}` }, user.failedLoginAttempts)
                             : React.createElement('span', { className: 'text-muted small' }, '-')
                     ),
+                    // Created By
+                    React.createElement('td', { key: 'createdBy' }, React.createElement('small', { className: 'text-muted' }, user.createdBy || '-')),
+                    // Updated By
+                    React.createElement('td', { key: 'updatedBy' }, React.createElement('small', { className: 'text-muted' }, user.updatedBy || '-')),
                     // Actions
                     React.createElement('td', { key: 'actions', className: 'text-end' }, React.Children.toArray([
+                        React.createElement('button', { key: 'history', className: 'btn btn-sm btn-link text-info', onClick: () => openHistoryModal(user), title: 'View History' }, 
+                            React.createElement('i', { className: 'fa-solid fa-clock-rotate-left' })
+                        ),
                         React.createElement('button', { key: 'edit', className: 'btn btn-sm btn-link text-primary', onClick: () => openEditModal(user) }, 
                             React.createElement('i', { className: 'fa-solid fa-pen-to-square' })
                         ),
@@ -453,6 +493,72 @@ export default function Users({ showToast }) {
         ),
         document.body,
         'delete-modal'
+      ),
+      
+      // History Modal
+      showHistoryModal && ReactDOM.createPortal(
+        React.createElement('div', { 
+            key: 'history-modal', 
+            className: 'modal fade show d-block', 
+            tabIndex: '-1',
+            style: { zIndex: 1055, display: 'block', overflowX: 'hidden', overflowY: 'auto' },
+            role: 'dialog'
+        }, 
+          React.createElement('div', { className: 'modal-dialog modal-dialog-centered modal-lg' }, 
+              React.createElement('div', { className: 'modal-content border-0 shadow-lg animate-fade-in', style: { borderRadius: '20px' } }, [
+                  // Modal Header
+                  React.createElement('div', { key: 'header', className: 'modal-header border-bottom-0 bg-modern-subtle' }, [
+                      React.createElement('h5', { key: 'title', className: 'modal-title fw-bold' }, 'User History'),
+                      React.createElement('button', { key: 'close', type: 'button', className: 'btn-close', onClick: () => setShowHistoryModal(false) })
+                  ]),
+                  // Modal Body
+                  React.createElement('div', { key: 'body', className: 'modal-body p-4' }, 
+                      loadingHistory 
+                      ? React.createElement('div', { className: 'd-flex justify-content-center py-5' }, 
+                          React.createElement('div', { className: 'spinner-border text-primary', role: 'status' })
+                        )
+                      : historyLogs.length === 0 
+                          ? React.createElement('div', { className: 'text-center text-muted py-5' }, 'No history records found.')
+                          : React.createElement('div', { className: 'table-responsive' }, 
+                              React.createElement('table', { className: 'table table-hover table-modern mb-0' }, [
+                                  React.createElement('thead', { key: 'thead' }, 
+                                      React.createElement('tr', null, [
+                                          React.createElement('th', { key: 'action' }, 'Action'),
+                                          React.createElement('th', { key: 'changedBy' }, 'Changed By'),
+                                          React.createElement('th', { key: 'date' }, 'Date'),
+                                          React.createElement('th', { key: 'details' }, 'Details')
+                                      ])
+                                  ),
+                                  React.createElement('tbody', { key: 'tbody' }, 
+                                      historyLogs.map(log => 
+                                          React.createElement('tr', { key: log.id }, [
+                                              React.createElement('td', { key: 'action' }, 
+                                                  React.createElement('span', { 
+                                                      className: `badge ${log.action === 'DELETE' ? 'bg-danger' : 'bg-warning text-dark'} bg-opacity-10` 
+                                                  }, log.action)
+                                              ),
+                                              React.createElement('td', { key: 'changedBy' }, log.changedBy),
+                                              React.createElement('td', { key: 'date' }, new Date(log.changedAt).toLocaleString()),
+                                              React.createElement('td', { key: 'details' }, 
+                                                  React.createElement('small', { className: 'text-muted' }, 
+                                                      `${log.name} (${log.email}) - ${log.role}`
+                                                  )
+                                              )
+                                          ])
+                                      )
+                                  )
+                              ])
+                          )
+                  ),
+                  // Modal Footer
+                  React.createElement('div', { key: 'footer', className: 'modal-footer border-top-0 bg-modern-subtle' }, [
+                      React.createElement('button', { key: 'close-btn', type: 'button', className: 'btn btn-secondary rounded-pill px-4', onClick: () => setShowHistoryModal(false) }, 'Close')
+                  ])
+              ])
+          )
+        ),
+        document.body,
+        'history-modal'
       )
   ]);
 }

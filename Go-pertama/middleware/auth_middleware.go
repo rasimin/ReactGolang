@@ -52,7 +52,8 @@ func AuthMiddleware(db *sql.DB) func(http.HandlerFunc) http.HandlerFunc {
 
 			// Check if user is logged in (Kicked status check)
 			var isLoggedIn bool
-			err := db.QueryRow("SELECT IsLoggedIn FROM Users WHERE Email = @p1", email).Scan(&isLoggedIn)
+			var name string
+			err := db.QueryRow("SELECT IsLoggedIn, Name FROM Users WHERE Email = @p1", email).Scan(&isLoggedIn, &name)
 			if err != nil {
 				// fmt.Printf("AuthMiddleware DB Error for %s: %v\n", email, err)
 				http.Error(w, "User not found or database error", http.StatusUnauthorized)
@@ -65,6 +66,7 @@ func AuthMiddleware(db *sql.DB) func(http.HandlerFunc) http.HandlerFunc {
 			}
 
 			r.Header.Set("X-User-Email", email)
+			r.Header.Set("X-User-Name", name)
 			next(w, r)
 		}
 	}

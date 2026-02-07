@@ -53,6 +53,10 @@ func migrateDB() {
 		 ALTER TABLE Users ADD AvatarType NVARCHAR(50) NULL;`,
 		`IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'IsLoggedIn' AND Object_ID = Object_ID(N'Users'))
 		 ALTER TABLE Users ADD IsLoggedIn BIT DEFAULT 0 WITH VALUES;`,
+		`IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'CreatedBy' AND Object_ID = Object_ID(N'Users'))
+		 ALTER TABLE Users ADD CreatedBy NVARCHAR(100) NULL;`,
+		`IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name = N'UpdatedBy' AND Object_ID = Object_ID(N'Users'))
+		 ALTER TABLE Users ADD UpdatedBy NVARCHAR(100) NULL;`,
 		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='ActivityLogs' and xtype='U')
 		 CREATE TABLE ActivityLogs (
 			ID INT IDENTITY(1,1) PRIMARY KEY,
@@ -60,6 +64,19 @@ func migrateDB() {
 			Action NVARCHAR(100) NOT NULL,
 			Details NVARCHAR(MAX),
 			CreatedAt DATETIME DEFAULT GETDATE()
+		 );`,
+		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='UserHistory' and xtype='U')
+		 CREATE TABLE UserHistory (
+			ID INT IDENTITY(1,1) PRIMARY KEY,
+			UserID INT NOT NULL,
+			Email NVARCHAR(255),
+			Name NVARCHAR(100),
+			Role NVARCHAR(50),
+			RoleID BIGINT,
+			IsActive BIT,
+			Action NVARCHAR(50),
+			ChangedBy NVARCHAR(100),
+			ChangedAt DATETIME DEFAULT GETDATE()
 		 );`,
 	}
 
@@ -294,6 +311,7 @@ func main() {
 	mux.HandleFunc("/api/activity-logs/export", middleware.EnableCORS(authMiddleware(userHandler.ExportActivityLogs)))
 	mux.HandleFunc("/api/users/active", middleware.EnableCORS(authMiddleware(userHandler.GetActiveUsers)))
 	mux.HandleFunc("/api/users/kick", middleware.EnableCORS(authMiddleware(userHandler.KickUser)))
+	mux.HandleFunc("/api/users/history", middleware.EnableCORS(authMiddleware(userHandler.GetUserHistory)))
 	mux.HandleFunc("/api/users", middleware.EnableCORS(authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			userHandler.GetUsers(w, r)

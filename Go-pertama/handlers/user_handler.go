@@ -54,7 +54,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.userService.Create(req, r.Header.Get("X-User-Email"))
+	err := h.userService.Create(req, r.Header.Get("X-User-Email"), r.Header.Get("X-User-Name"))
 	if err != nil {
 		statusCode := http.StatusInternalServerError
 		if err.Error() == "email already exists" {
@@ -80,7 +80,7 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.userService.Update(req, r.Header.Get("X-User-Email"))
+	err := h.userService.Update(req, r.Header.Get("X-User-Email"), r.Header.Get("X-User-Name"))
 	if err != nil {
 		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -101,8 +101,13 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, _ := strconv.Atoi(idStr)
-	err := h.userService.Delete(id, r.Header.Get("X-User-Email"))
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid id parameter", http.StatusBadRequest)
+		return
+	}
+
+	err = h.userService.Delete(id, r.Header.Get("X-User-Email"), r.Header.Get("X-User-Name"))
 	if err != nil {
 		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -303,4 +308,32 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(user)
+}
+
+func (h *UserHandler) GetUserHistory(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	idStr := r.URL.Query().Get("id")
+	if idStr == "" {
+		http.Error(w, "Missing id parameter", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid id parameter", http.StatusBadRequest)
+		return
+	}
+
+	history, err := h.userService.GetUserHistory(id)
+	if err != nil {
+		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(history)
 }

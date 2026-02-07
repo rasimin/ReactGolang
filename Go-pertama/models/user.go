@@ -32,7 +32,22 @@ type User struct {
 	LastLogout          *time.Time `json:"lastLogout"`
 	FailedLoginAttempts int        `json:"failedLoginAttempts"`
 	IsLoggedIn          bool       `json:"isLoggedIn"`
+	CreatedBy           string     `json:"createdBy"`
+	UpdatedBy           string     `json:"updatedBy"`
 	Password            string     `json:"-"` // Internal use, don't expose in JSON
+}
+
+type UserHistory struct {
+	ID        int       `json:"id"`
+	UserID    int       `json:"userId"`
+	Email     string    `json:"email"`
+	Name      string    `json:"name"`
+	Role      string    `json:"role"`
+	RoleID    int       `json:"roleId"`
+	IsActive  bool      `json:"isActive"`
+	Action    string    `json:"action"` // UPDATE, DELETE
+	ChangedBy string    `json:"changedBy"`
+	ChangedAt time.Time `json:"changedAt"`
 }
 
 type UsersResponse struct {
