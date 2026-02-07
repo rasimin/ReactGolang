@@ -77,16 +77,20 @@ func (r *userRepository) GetAllActivityLogs(limit, offset int, search string, us
 	pOffset := len(params) + 1
 	pLimit := len(params) + 2
 
+	paginationClause := ""
+	if limit > 0 {
+		paginationClause = fmt.Sprintf("OFFSET @p%d ROWS FETCH NEXT @p%d ROWS ONLY", pOffset, pLimit)
+		params = append(params, offset, limit)
+	}
+
 	query := fmt.Sprintf(`
 		SELECT a.ID, a.UserID, u.Name, u.Email, a.Action, a.Details, a.CreatedAt
 		FROM ActivityLogs a
 		LEFT JOIN Users u ON a.UserID = u.ID
 		%s
 		ORDER BY a.CreatedAt DESC
-		OFFSET @p%d ROWS FETCH NEXT @p%d ROWS ONLY
-	`, whereClause, pOffset, pLimit)
-
-	params = append(params, offset, limit)
+		%s
+	`, whereClause, paginationClause)
 
 	rows, err := r.db.Query(query, params...)
 	if err != nil {

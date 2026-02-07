@@ -26,6 +26,7 @@ type UserService interface {
 	KickUser(email string, kickedBy string) error
 	GetActivityLogs(email string, limit int, offset int) ([]models.ActivityLog, error)
 	GetAllActivityLogs(page, limit int, search string, userID int, startDate, endDate string) ([]models.ActivityLog, int, error)
+	ExportActivityLogs(search string, userID int, startDate, endDate string) ([]byte, error)
 }
 
 type userService struct {

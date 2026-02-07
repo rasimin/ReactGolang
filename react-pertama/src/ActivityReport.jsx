@@ -110,6 +110,38 @@ export default function ActivityReport({ showToast }) {
     setCurrentPage(1);
   };
 
+  const handleExport = async () => {
+    try {
+      const queryParams = new URLSearchParams({
+        search: debouncedSearch,
+        userId: selectedUser,
+        startDate: startDate,
+        endDate: endDate
+      });
+
+      const response = await fetch(`${config.api.baseUrl}/api/activity-logs/export?${queryParams}`, {
+        headers: {
+          'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
+        }
+      });
+
+      if (!response.ok) throw new Error('Export failed');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `activity_logs_${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error("Export error:", err);
+      showToast('Failed to export logs', 'error');
+    }
+  };
+
   if (isFirstLoad && loading) {
     return React.createElement('div', { className: 'd-flex justify-content-center align-items-center', style: { minHeight: '400px' } },
       React.createElement('div', { className: 'spinner-border text-primary', role: 'status' },
@@ -137,7 +169,8 @@ export default function ActivityReport({ showToast }) {
             setCurrentPage(1);
           },
           placeholder: "Select User",
-          compact: true
+          compact: true,
+          searchable: true
         })
       ),
       // Start Date Filter
@@ -172,6 +205,17 @@ export default function ActivityReport({ showToast }) {
       }, 
         React.createElement('i', { className: 'fa-solid fa-rotate' })
       ),
+      // Export Button
+      React.createElement('button', {
+        key: 'export',
+        className: 'btn btn-success rounded-pill px-3',
+        style: { height: '42px' },
+        onClick: handleExport,
+        title: 'Export to Excel'
+      }, [
+        React.createElement('i', { key: 'icon', className: 'fa-solid fa-file-excel me-2' }),
+        'Export'
+      ]),
       // Search (Moved to right)
       React.createElement('div', { key: 'search', className: 'flex-grow-1 ms-auto', style: { maxWidth: '300px' } }, 
         React.createElement(SearchInput, {
@@ -229,7 +273,7 @@ export default function ActivityReport({ showToast }) {
                 ),
                 React.createElement('td', { key: 'details', className: 'text-secondary' }, log.details),
                 React.createElement('td', { key: 'time', className: 'text-muted small' },
-                  new Date(log.createdAt).toLocaleString()
+                  log.createdAt ? new Date(log.createdAt).toISOString().replace('T', ' ').substring(0, 19) : '-'
                 )
               ])
             ) : React.createElement('tr', { key: 'empty' },

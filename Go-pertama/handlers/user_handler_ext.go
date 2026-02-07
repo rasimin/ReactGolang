@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 func (h *UserHandler) GetActivityLogs(w http.ResponseWriter, r *http.Request) {
@@ -95,4 +97,33 @@ func (h *UserHandler) GetSystemActivityLogs(w http.ResponseWriter, r *http.Reque
 		"page":  page,
 		"limit": limit,
 	})
+}
+
+func (h *UserHandler) ExportActivityLogs(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	search := r.URL.Query().Get("search")
+	userIDStr := r.URL.Query().Get("userId")
+	startDate := r.URL.Query().Get("startDate")
+	endDate := r.URL.Query().Get("endDate")
+
+	userID := 0
+	if userIDStr != "" {
+		fmt.Sscanf(userIDStr, "%d", &userID)
+	}
+
+	csvData, err := h.userService.ExportActivityLogs(search, userID, startDate, endDate)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	filename := fmt.Sprintf("activity_logs_%s.csv", time.Now().Format("20060102_150405"))
+
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+	w.Write(csvData)
 }
