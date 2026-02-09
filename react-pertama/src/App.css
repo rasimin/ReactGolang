@@ -247,6 +247,29 @@ body.dark .form-control-modern:focus {
   border-color: #818cf8;
 }
 
+/* File Input Dark Mode Styling */
+body.dark .file-input-modern {
+  color: #cbd5e1; /* Text color for "No file chosen" */
+}
+
+/* Standard & Webkit Selectors for Choose File Button */
+body.dark .file-input-modern::file-selector-button,
+body.dark .file-input-modern::-webkit-file-upload-button {
+  background-color: #334155 !important;
+  color: #e2e8f0 !important;
+  border: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+body.dark .file-input-modern:hover::file-selector-button,
+body.dark .file-input-modern:hover::-webkit-file-upload-button {
+  background-color: #38465c !important; /* Subtle hover */
+  color: #f1f5f9 !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
 .form-select-modern {
   background-color: #f8fafc;
   border: 1px solid #cbd5e1;

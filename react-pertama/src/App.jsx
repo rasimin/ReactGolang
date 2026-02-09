@@ -18,9 +18,12 @@ import ActivityReport from '/src/ActivityReport.jsx';
 
 // --- Components ---
 
+import SummaryReport from '/src/SummaryReport.jsx';
+
 const MENU_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: 'fa-solid fa-gauge' },
   { id: 'workspaces', label: 'Workspaces', icon: 'fa-solid fa-building' },
+  { id: 'summary-report', label: 'Summary Report', icon: 'fa-solid fa-file-excel' },
   { id: 'transactions', label: 'Transactions', icon: 'fa-solid fa-money-bill-transfer' },
   
   {
@@ -524,6 +527,10 @@ function DashboardContent({ activeMenu, showToast, updateUser, onLogout }) {
   // Users and Settings components remain similar but wrapped in modern-card...
   if (activeMenu === 'workspaces') {
     return React.createElement(Workspaces, { showToast });
+  }
+
+  if (activeMenu === 'summary-report') {
+    return React.createElement(SummaryReport, { showToast });
   }
 
   if (activeMenu === 'transactions') {

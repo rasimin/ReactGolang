@@ -293,6 +293,7 @@ func main() {
 	configHandler := handlers.NewConfigHandler(configService)
 	changeLogHandler := handlers.NewChangeLogHandler()
 	roleHandler := handlers.NewRoleHandler(roleService)
+	reportHandler := handlers.NewReportHandler()
 
 	// Initialize Middleware
 	authMiddleware := middleware.AuthMiddleware(db)
@@ -331,6 +332,9 @@ func main() {
 	mux.HandleFunc("/upload", middleware.EnableCORS(authMiddleware(userHandler.UploadProfilePicture)))
 	mux.HandleFunc("/api/avatar/remove", middleware.EnableCORS(authMiddleware(userHandler.RemoveAvatar)))
 	mux.HandleFunc("/api/avatar", middleware.EnableCORS(userHandler.GetAvatar))
+
+	// Report Route
+	mux.HandleFunc("/api/upload-summary", middleware.EnableCORS(authMiddleware(reportHandler.UploadSummary)))
 
 	// Change Log Route
 	mux.HandleFunc("/api/changelog", middleware.EnableCORS(authMiddleware(changeLogHandler.GetChangeLog)))
