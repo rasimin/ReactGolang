@@ -49,6 +49,32 @@ export default function SummaryReport({ showToast }) {
         }
     };
 
+    // Scroll to detail date
+    const scrollToDate = (dateStr) => {
+        if (!dateStr) return;
+        const safeId = `detail-date-${dateStr.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '')}`;
+        const element = document.getElementById(safeId);
+        const container = document.getElementById('detail-table-container');
+        
+        if (element && container) {
+            // Calculate position relative to container
+            // We need to find the relative top position of the element inside the container
+            const headerOffset = 60; // Approximate height of the sticky header + some breathing room
+            const elementTop = element.offsetTop;
+            
+            container.scrollTo({
+                top: elementTop - headerOffset,
+                behavior: 'smooth'
+            });
+
+            // Add temporary highlight
+            element.classList.add('bg-warning', 'bg-opacity-25');
+            setTimeout(() => {
+                element.classList.remove('bg-warning', 'bg-opacity-25');
+            }, 2000);
+        }
+    };
+
     // Calculate Stats
     const stats = useMemo(() => {
         if (!reportData) return null;
@@ -189,7 +215,12 @@ export default function SummaryReport({ showToast }) {
                                 ),
                                 React.createElement('tbody', { key: 'tbody' }, [
                                     ...reportData.summary.map((row, idx) => 
-                                        React.createElement('tr', { key: idx }, [
+                                        React.createElement('tr', { 
+                                            key: idx,
+                                            style: { cursor: 'pointer' },
+                                            onClick: () => scrollToDate(row.finishDate),
+                                            title: 'Click to view details'
+                                        }, [
                                             React.createElement('td', { className: 'ps-4 fw-medium' }, row.finishDate),
                                             React.createElement('td', { className: 'text-end pe-4 fw-bold text-primary' }, row.totalWeight.toFixed(2))
                                         ])
@@ -219,7 +250,11 @@ export default function SummaryReport({ showToast }) {
                         ])
                     ),
                     React.createElement('div', { className: 'card-body p-0 flex-grow-1' },
-                        React.createElement('div', { className: 'table-responsive', style: { maxHeight: '650px' } },
+                        React.createElement('div', { 
+                            id: 'detail-table-container',
+                            className: 'table-responsive', 
+                            style: { maxHeight: '650px' } 
+                        },
                             React.createElement('table', { className: 'table table-hover mb-0 align-middle table-modern' }, [
                                 React.createElement('thead', { key: 'thead', className: 'sticky-top', style: { zIndex: 10, backgroundColor: 'var(--bg-card)' } },
                                     React.createElement('tr', null, [
@@ -232,7 +267,15 @@ export default function SummaryReport({ showToast }) {
                                 React.createElement('tbody', { key: 'tbody' }, [
                                     ...reportData.detail.map((row, idx) => {
                                         const isTotal = row.taskName === 'Total';
-                                        return React.createElement('tr', { key: idx, className: isTotal ? "table-active" : "" }, [
+                                        // Generate ID for the first occurrence of each date to allow scrolling
+                                        const isFirstOfDate = idx === 0 || reportData.detail[idx - 1].finishDate !== row.finishDate;
+                                        const dateId = isFirstOfDate ? `detail-date-${row.finishDate.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '')}` : undefined;
+
+                                        return React.createElement('tr', { 
+                                            key: idx, 
+                                            className: isTotal ? "table-active" : "",
+                                            id: dateId 
+                                        }, [
                                             React.createElement('td', { className: 'ps-4 text-nowrap small text-muted' }, row.finishDate),
                                             React.createElement('td', { className: isTotal ? "fw-bold text-uppercase" : "" }, 
                                                 isTotal ? React.createElement('span', { className: 'badge bg-secondary px-3' }, 'Daily Total') : row.taskName

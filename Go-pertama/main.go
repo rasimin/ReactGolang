@@ -293,7 +293,7 @@ func main() {
 	configHandler := handlers.NewConfigHandler(configService)
 	changeLogHandler := handlers.NewChangeLogHandler()
 	roleHandler := handlers.NewRoleHandler(roleService)
-	reportHandler := handlers.NewReportHandler()
+	reportHandler := handlers.NewReportHandler(userService)
 
 	// Initialize Middleware
 	authMiddleware := middleware.AuthMiddleware(db)

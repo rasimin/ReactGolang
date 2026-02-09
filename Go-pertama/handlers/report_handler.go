@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"go-pertama/services"
 	"net/http"
 	"sort"
 	"strconv"
@@ -12,10 +13,12 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
-type ReportHandler struct{}
+type ReportHandler struct {
+	userService services.UserService
+}
 
-func NewReportHandler() *ReportHandler {
-	return &ReportHandler{}
+func NewReportHandler(userService services.UserService) *ReportHandler {
+	return &ReportHandler{userService: userService}
 }
 
 type SummaryRow struct {
@@ -50,7 +53,7 @@ func (h *ReportHandler) UploadSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, _, err := r.FormFile("file")
+	file, header, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, "Error retrieving file", http.StatusBadRequest)
 		return
@@ -106,7 +109,7 @@ func (h *ReportHandler) UploadSummary(w http.ResponseWriter, r *http.Request) {
 
 	for i := 1; i < len(rows); i++ {
 		row := rows[i]
-		
+
 		// Helper to get cell value safely
 		getCell := func(colName string) string {
 			idx := colIndex[colName]
@@ -125,7 +128,7 @@ func (h *ReportHandler) UploadSummary(w http.ResponseWriter, r *http.Request) {
 		// Try to handle Excel date format (often coming as MM-DD-YY or similar string, or serial)
 		// For simplicity, we'll try to parse common formats or use the string as is if it looks like a date.
 		// A robust way would be checking if it's a serial number first.
-		
+
 		parsedDateStr := parseDate(finishDateRaw)
 
 		// Parse Weight
@@ -158,7 +161,7 @@ func (h *ReportHandler) UploadSummary(w http.ResponseWriter, r *http.Request) {
 
 	for _, date := range sortedDates {
 		totalWeight := dateGroups[date]
-		
+
 		// Add to Summary
 		summary = append(summary, SummaryRow{
 			FinishDate:  date,
@@ -190,6 +193,12 @@ func (h *ReportHandler) UploadSummary(w http.ResponseWriter, r *http.Request) {
 		Detail:  detail,
 	}
 
+	// Log Activity
+	email := r.Header.Get("X-User-Email")
+	if email != "" {
+		h.userService.LogActivity(email, "UPLOAD_SUMMARY_REPORT", fmt.Sprintf("Uploaded summary report: %s", header.Filename))
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
@@ -201,7 +210,7 @@ func parseDate(dateStr string) string {
 	if dateStr == "" {
 		return ""
 	}
-	
+
 	// Check if it's a serial number (numeric)
 	if f, err := strconv.ParseFloat(dateStr, 64); err == nil {
 		// Convert Excel serial date to time
@@ -214,11 +223,11 @@ func parseDate(dateStr string) string {
 
 	// Try common layouts
 	layouts := []string{
-		"01-02-06",       // MM-DD-YY
-		"2006-01-02",     // YYYY-MM-DD
-		"01/02/2006",     // MM/DD/YYYY
-		"1/2/06",         // M/D/YY
-		"02-Jan-06",      // DD-Mon-YY
+		"01-02-06",   // MM-DD-YY
+		"2006-01-02", // YYYY-MM-DD
+		"01/02/2006", // MM/DD/YYYY
+		"1/2/06",     // M/D/YY
+		"02-Jan-06",  // DD-Mon-YY
 	}
 
 	for _, layout := range layouts {

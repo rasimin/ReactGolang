@@ -7,6 +7,7 @@ import (
 	"go-pertama/repository"
 	"io"
 	"mime/multipart"
+	"net/http"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -27,6 +28,7 @@ type UserService interface {
 	GetActivityLogs(email string, limit int, offset int) ([]models.ActivityLog, error)
 	GetAllActivityLogs(page, limit int, search string, userID int, startDate, endDate string) ([]models.ActivityLog, int, error)
 	ExportActivityLogs(search string, userID int, startDate, endDate string) ([]byte, error)
+	LogActivity(email, action, details string) error
 	GetUserHistory(userID int) ([]models.UserHistory, error)
 }
 
@@ -40,6 +42,11 @@ func NewUserService(repo repository.UserRepository) UserService {
 
 func (s *userService) GetUserHistory(userID int) ([]models.UserHistory, error) {
 	return s.repo.GetUserHistory(userID)
+}
+
+func (s *userService) LogActivity(email, action, details string) error {
+	s.repo.LogActivity(email, action, details)
+	return nil
 }
 
 func (s *userService) ResetFailedAttempts(id int, updatedBy string) error {
@@ -98,58 +105,64 @@ func (s *userService) Create(req models.CreateUserRequest, creatorEmail, creator
 		return err
 	}
 
-	user := &models.User{
+	user := models.User{
 		Email:     req.Email,
 		Password:  string(hashedPassword),
 		Name:      req.Name,
-		Role:      req.Role,
+		Role:      req.Role, // Kept for backward compatibility
 		RoleID:    req.RoleID,
 		IsActive:  req.IsActive,
 		CreatedBy: creatorName,
+		UpdatedBy: creatorName,
 	}
 
-	err = s.repo.Create(user)
+	err = s.repo.Create(&user)
 	if err == nil {
-		s.repo.LogActivity(creatorEmail, "CREATE_USER", "Created user "+req.Email)
+		s.repo.LogActivity(creatorEmail, "CREATE_USER", fmt.Sprintf("Created user: %s", req.Email))
 	}
 	return err
 }
 
 func (s *userService) Update(req models.UpdateUserRequest, updaterEmail, updaterName string) error {
-	user := &models.User{
-		ID:        req.ID,
-		Email:     req.Email,
-		Name:      req.Name,
-		Role:      req.Role,
-		RoleID:    req.RoleID,
-		IsActive:  req.IsActive,
-		UpdatedBy: updaterName,
-	}
-
-	err := s.repo.Update(user)
+	user, err := s.repo.GetByID(req.ID)
 	if err != nil {
 		return err
 	}
 
+	user.Name = req.Name
+	user.Role = req.Role // Kept for backward compatibility
+	user.RoleID = req.RoleID
+	user.IsActive = req.IsActive
+	user.UpdatedBy = updaterName
+
 	if req.Password != "" {
-		hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 		if err != nil {
 			return err
 		}
-		err = s.repo.UpdatePassword(req.ID, string(hashed))
-		if err != nil {
-			return err
-		}
+		user.Password = string(hashedPassword)
 	}
 
-	s.repo.LogActivity(updaterEmail, "UPDATE_USER", fmt.Sprintf("Updated user ID %d", req.ID))
-	return nil
+	// If email is changed, check uniqueness
+	if req.Email != user.Email {
+		exists, _ := s.repo.EmailExists(req.Email)
+		if exists {
+			return errors.New("email already exists")
+		}
+		user.Email = req.Email
+	}
+
+	err = s.repo.Update(user)
+	if err == nil {
+		s.repo.LogActivity(updaterEmail, "UPDATE_USER", fmt.Sprintf("Updated user ID: %d", req.ID))
+	}
+	return err
 }
 
 func (s *userService) Delete(id int, deleterEmail, deleterName string) error {
 	err := s.repo.Delete(id, deleterName)
 	if err == nil {
-		s.repo.LogActivity(deleterEmail, "DELETE_USER", fmt.Sprintf("Deleted user ID %d", id))
+		s.repo.LogActivity(deleterEmail, "DELETE_USER", fmt.Sprintf("Deleted user ID: %d", id))
 	}
 	return err
 }
@@ -161,18 +174,17 @@ func (s *userService) UploadProfilePicture(email string, file multipart.File, he
 		return err
 	}
 
-	// Determine content type
-	contentType := header.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = "application/octet-stream"
+	// Validate file type
+	contentType := http.DetectContentType(fileBytes)
+	if contentType != "image/jpeg" && contentType != "image/png" {
+		return errors.New("invalid file type, only JPEG and PNG are allowed")
 	}
 
-	// Update DB
+	// Update user with avatar binary data
 	err = s.repo.UpdateAvatar(email, fileBytes, contentType)
 	if err == nil {
-		s.repo.LogActivity(email, "UPLOAD_AVATAR", "Uploaded avatar ("+contentType+")")
+		s.repo.LogActivity(email, "UPLOAD_AVATAR", "Uploaded new profile picture")
 	}
-
 	return err
 }
 
@@ -187,7 +199,7 @@ func (s *userService) GetAvatarByID(id int) ([]byte, string, error) {
 func (s *userService) RemoveAvatar(email string) error {
 	err := s.repo.RemoveAvatar(email)
 	if err == nil {
-		s.repo.LogActivity(email, "REMOVE_AVATAR", "Removed avatar")
+		s.repo.LogActivity(email, "REMOVE_AVATAR", "Removed profile picture")
 	}
 	return err
 }
